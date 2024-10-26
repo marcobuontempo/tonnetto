@@ -1,4 +1,4 @@
-import { EMPTY, EDGE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, DEFAULT_FEN, WHITE, BLACK, PIECE_LOOKUP, SQUARE_ASCII, MAILBOX120, MAILBOX64 } from "./constants";
+import { EMPTY, EDGE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, DEFAULT_FEN, WHITE, BLACK, PIECE_LOOKUP, SQUARE_ASCII, MAILBOX120, MAILBOX64, HAS_MOVED, PIECE_MASK, COLOUR_MASK } from "./constants";
 
 export default class ChessBoard {
   public board = new Uint8Array(120).fill(EDGE);  // 10x12 1D-array board representation
@@ -20,8 +20,18 @@ export default class ChessBoard {
       }
       else {
         const colour = pieceFEN.toUpperCase() === pieceFEN ? WHITE : BLACK;
-        const piece = PIECE_LOOKUP[pieceFEN.toUpperCase()] | colour;
-        board64[boardIndex] = piece;
+        const piece = PIECE_LOOKUP[pieceFEN.toUpperCase()];
+        let hasMoved = HAS_MOVED;
+        if (piece === PAWN) {
+          if (
+            (colour === WHITE && boardIndex >= 48 && boardIndex <= 55) ||
+            (colour === BLACK && boardIndex >= 8 && boardIndex <= 15)
+          ) {
+            hasMoved = 0;
+          }
+        }
+
+        board64[boardIndex] = piece | colour | hasMoved;
         boardIndex++;
       }
     }
@@ -44,7 +54,9 @@ export default class ChessBoard {
       }
 
       const square = this.board[idx];
-      output += SQUARE_ASCII[square];
+      const piece = square & PIECE_MASK;
+      const colour = square & COLOUR_MASK;
+      output += SQUARE_ASCII[piece | colour];
     }
 
     console.log(output);

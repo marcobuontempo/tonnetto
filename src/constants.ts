@@ -10,6 +10,8 @@ export const ROOK = 0b0000_0100;        // = 4
 export const QUEEN = 0b0000_0101;       // = 5
 export const KING = 0b0000_0110;        // = 6
 
+export const HAS_MOVED = 0b0000_1000;   // = 8
+
 export const WHITE = 0b0001_0000;       // = 16
 export const BLACK = 0b0010_0000;       // = 32
  
@@ -116,3 +118,12 @@ export const SLIDERS = [
 
 /* MOVE ENCODING */
 
+const FROM_INDEX_MASK =             0b0000_0000_0000_0000_0000_0000_1111_1111;  // << 0
+const TO_INDEX_MASK =               0b0000_0000_0000_0000_1111_1111_0000_0000;  // << 8
+const PIECE_CAPTURE_MASK =          0b0000_0000_0011_1111_0000_0000_0000_0000;  // << 16
+const PIECE_FROM_HAS_MOVED_MASK =   0b0000_0001_0000_0000_0000_0000_0000_0000;  // << 24
+const PROMOTION_TO_MASK =           0b0000_1110_0000_0000_0000_0000_0000_0000;  // << 25
+const ENPASSANT_MASK =              0b0001_0000_0000_0000_0000_0000_0000_0000;  // << 28
+const DOUBLE_PUSH_MASK =            0b0010_0000_0000_0000_0000_0000_0000_0000;  // << 29
+const KINGSIDE_CASTLE_MASK =        0b0100_0000_0000_0000_0000_0000_0000_0000;  // << 30
+const QUEENSIDE_CASTLE_MASK =       0b1000_0000_0000_0000_0000_0000_0000_0000;  // << 31

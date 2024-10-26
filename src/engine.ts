@@ -1,5 +1,5 @@
 import ChessBoard from "./chessboard";
-import { EMPTY, EDGE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, DEFAULT_FEN, WHITE, BLACK, PIECE_MASK, COLOUR_MASK, MAILBOX64, MAILBOX120, MOVE_LIST, SQUARE_ASCII, SLIDERS } from "./constants";
+import { EMPTY, EDGE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, DEFAULT_FEN, WHITE, BLACK, PIECE_MASK, COLOUR_MASK, MAILBOX64, MAILBOX120, MOVE_LIST, SQUARE_ASCII, SLIDERS, HAS_MOVED } from "./constants";
 
 export default class Engine {
   private chessboard: ChessBoard;
@@ -10,56 +10,79 @@ export default class Engine {
   }
 
   generatePseudoMoves(turnColour: number) {
+    const moves = new Uint32Array(3600);
+    let moveIdx = 0;
+
     for (let i = 0; i < 64; i++) {
-      const mailboxIdx = MAILBOX64[i];
-      const fromSquare = this.chessboard.board[mailboxIdx];
+      const fromBoardIndex = MAILBOX64[i];
+      const fromSquare = this.chessboard.board[fromBoardIndex];
       const fromPiece = fromSquare & PIECE_MASK;
       const fromColour = fromSquare & COLOUR_MASK;
+      const fromHasMoved = fromSquare & HAS_MOVED ? 1 : 0;
 
       // skip checking pieces from opposition colour
       if (fromColour !== turnColour) continue;
       
       // get index for MOVE_LIST and SLIDERS (index is their piece number, except black pawn is 0 as it moves different to white pawn)
-      const fromPieceIdx = (fromPiece === PAWN && fromColour === BLACK) ? 0 : fromPiece;
+      const fromPieceIndex = (fromPiece === PAWN && fromColour === BLACK) ? 0 : fromPiece;
 
-      const directions = MOVE_LIST[fromPieceIdx];
-      const slider = SLIDERS[fromPieceIdx];
+      const directions = MOVE_LIST[fromPieceIndex];
+      const slider = SLIDERS[fromPieceIndex];
  
       for (let direction of directions) {
-        let toSquare = mailboxIdx;
+        let toBoardIndex = fromBoardIndex;
 
         while (true) {
-          toSquare += direction;
+          toBoardIndex += direction;
 
-          const currentSquare = this.chessboard.board[toSquare];
+          const toSquare = this.chessboard.board[toBoardIndex];
+          const toColour = toSquare & COLOUR_MASK;
 
-          if (currentSquare === EMPTY) {
-            console.log(SQUARE_ASCII[fromPiece | fromColour], toSquare, 'Add move - empty');
+          let move = 0;
+
+          if (toSquare === EMPTY) {
+            // empty square means piece can move here
+            move = (fromHasMoved << 24) | (toBoardIndex << 8) | (fromBoardIndex);
+            moves[moveIdx++] = move;
+          }
+          else if (toSquare === EDGE) {
+            // if edge of board, stop search in this direction
             break;
           }
-          else if (currentSquare === EDGE) {
-            console.log(SQUARE_ASCII[fromPiece | fromColour], toSquare, 'No move - edge');
+          else if (toColour === fromColour) {
+            // if blocked by same colour pieces, stop search in this direction
             break;
           }
-
-          const currentColour = currentSquare & COLOUR_MASK;
-          if (currentColour === fromColour) {
-            console.log(SQUARE_ASCII[fromPiece | fromColour], toSquare, 'No move - colour blocked');
-            break;
+          else if (toColour !== fromColour && fromPiece !== PAWN) {
+            // if opponent piece, capture (except pawn, cannot capture with forward push)
+            move = (fromHasMoved << 24) | (toSquare << 16) | (toBoardIndex << 8) | (fromBoardIndex);
+            moves[moveIdx++] = move;
           }
-          else if (currentColour !== fromColour && fromPiece !== PAWN) {
-            console.log(SQUARE_ASCII[fromPiece | fromColour], toSquare, 'Add move - capture');
-          }
-
+          
           if (slider === false) {
-            console.log(SQUARE_ASCII[fromPiece | fromColour], toSquare, 'Break - no slider');
             break;
           }
         }
 
-        // don't continue calculating moves for pawn (other than single push). special moves are calculated next.
-        if (fromPiece === PAWN) break;
+        if (fromPiece === PAWN) break;  // only single pawn push here - special moves are generated later
+      }
+
+
+      /* SPECIAL MOVES */
+
+      // pawn
+      if (fromPiece === PAWN) {
+        // check direction0
+          // if empty, add move
+          // check !has_moved, if so, check direction1
+            // if also empty, add move
+
+        // check direction 2 & 3
+          // if opposite piece, add capture
+          // if en passant square, add capture
       }
     }
+
   }
 }
+
