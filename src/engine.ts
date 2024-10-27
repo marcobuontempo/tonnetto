@@ -3,10 +3,27 @@ import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_
 
 export default class Engine {
   private chessboard: ChessBoard;
+  private kingPositions = new Uint8Array([SQUARE.EMPTY, SQUARE.EMPTY]);    // cache for [white, black] kig positions for quick lookup
 
   constructor(fen?: string) {
     this.chessboard = new ChessBoard(fen);
+
+
     return;
+  }
+
+  updateKingPositionCache() {
+    for (let i = 0; i < 64; i++) {
+      const boardIndex = MAILBOX64[i];
+      const square = this.chessboard.board[boardIndex];
+      const piece = square & PIECE_MASK.TYPE;
+      const colour = square & PIECE_MASK.COLOUR;
+
+      if (piece === PIECE.KING) {
+        const positionIndex = (colour === PIECE.IS_WHITE) ? 0 : 1;
+        this.kingPositions[positionIndex] = boardIndex;
+      }
+    }
   }
 
   generatePseudoMoves(turnColour: number) {
@@ -170,5 +187,63 @@ export default class Engine {
       }
     }
   }
+
+  kingIsInCheck(kingColour: number) {
+    // get king position
+    const cacheIndex = (kingColour === PIECE.IS_WHITE) ? 0 : 1;
+    const kingPosition = this.kingPositions[cacheIndex];
+
+    // check for any attacking sliders
+    const sliderMoves = MOVE_LIST[PIECE.QUEEN];
+    for (let direction of sliderMoves) {
+      let currentPosition = kingPosition;
+      while (true) {
+        currentPosition += direction;
+        const currentSquare = this.chessboard.board[currentPosition];
+        const currentPiece = currentSquare & PIECE_MASK.TYPE;
+        const currentColour = currentSquare & PIECE_MASK.COLOUR;
+
+        if (currentSquare === SQUARE.EMPTY) continue;
+        if (currentSquare === SQUARE.EDGE) break;
+        if (currentColour === kingColour) break;
+
+        const currentIsSlider = SLIDERS[currentPiece];
+        if (currentIsSlider) return true;  // under attack by slider
+        break;  // piece is protected from sliders by a non-slider opponent piece
+      }
+    }
+
+    // check for attacking knights
+    const knightMoves = MOVE_LIST[PIECE.KNIGHT];
+    for (let direction of knightMoves) {
+      const currentSquare = this.chessboard.board[kingPosition + direction];
+      const currentPiece = currentSquare & PIECE_MASK.TYPE;
+      const currentColour = currentSquare & PIECE_MASK.COLOUR;
+      if (currentColour === kingColour) continue;
+      if (currentPiece === PIECE.KNIGHT) return true;  // under attack by knight
+    }
+
+    // check for diagonal pawn moves
+    const pawnIndex = kingColour === PIECE.IS_WHITE ? 0 : 1;    // used to access the black/white pawn's move set. we use the *same* colour moves as the king to check, as we are searching backwards *from* the king, and the same pawn colour mirrors the opponent pawn attacks.
+    const eastPawnIndex = MOVE_LIST[pawnIndex][2];
+    const eastPawnSquare = this.chessboard.board[eastPawnIndex];
+    const eastPawnPiece = eastPawnSquare & PIECE_MASK.TYPE;
+    const eastPawnColour = eastPawnSquare & PIECE_MASK.COLOUR;
+    if (eastPawnColour !== kingColour && eastPawnPiece === PIECE.PAWN) {
+      return true;  // under attack by pawn
+    }
+
+    const westPawnIndex = MOVE_LIST[pawnIndex][3];
+    const westPawnSquare = this.chessboard.board[westPawnIndex];
+    const westPawnPiece = westPawnSquare & PIECE_MASK.TYPE;
+    const westPawnColour = westPawnSquare & PIECE_MASK.COLOUR;
+    if (westPawnColour !== kingColour && westPawnPiece === PIECE.PAWN) {
+      return true;  // under attack by pawn
+    }
+
+    // default return if no attackers found
+    return false;
+  }
+  
 }
 
