@@ -1,4 +1,4 @@
-import { BOARD_STATES, DEFAULT_FEN, MAILBOX64, PIECE, PIECE_LOOKUP, PIECE_MASK, SQUARE, SQUARE_ASCII } from "./constants";
+import { BOARD_STATES, DEFAULT_FEN, MAILBOX120, MAILBOX64, PIECE, PIECE_LOOKUP, PIECE_MASK, SQUARE, SQUARE_ASCII } from "./constants";
 
 export default class ChessBoard {
   public board = new Uint8Array(120).fill(SQUARE.EDGE);  // 10x12 1D-array board representation
@@ -72,6 +72,13 @@ export default class ChessBoard {
     const file = fileCh.charCodeAt(0) - 97;
     const rank = 64 - parseInt(rankCh) * 8;
     return MAILBOX64[file + rank];
+  }
+
+  indexToAlgebraic(index: number) {
+    const mailbox64 = MAILBOX120[index];
+    const file = String.fromCharCode((mailbox64 % 8) + 65);
+    const rank = 8 - Math.floor(mailbox64 / 8);
+    return `${file}${rank}`;
   }
 
   printBoard() {
