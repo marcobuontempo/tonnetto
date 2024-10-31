@@ -1,5 +1,4 @@
 import Engine from "./engine";
 
 const engine = new Engine();
-
-console.log(engine.perft(4))
+engine.perft(6, true)

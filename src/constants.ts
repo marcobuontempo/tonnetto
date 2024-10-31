@@ -22,7 +22,7 @@ export const PIECE_MASK = {
   COLOUR: 0b0011_0000,
 }
 
-export const PROMOTION_PIECES = [PIECE.KNIGHT, PIECE.BISHOP, PIECE.QUEEN];
+export const PROMOTION_PIECES = [PIECE.KNIGHT, PIECE.BISHOP, PIECE.ROOK, PIECE.QUEEN];
 
 export const PIECE_LOOKUP: Record<string, number> = {
   P: PIECE.PAWN,

@@ -95,7 +95,7 @@ export default class Engine {
         const westDiagonalIndex = fromBoardIndex + directions[3];
         
         if (this.chessboard.board[singlePushIndex] === SQUARE.EMPTY) {
-          if (singlePushIndex >= 31 && singlePushIndex <= 81) {
+          if (singlePushIndex >= 31 && singlePushIndex <= 88) {
             // regular single push
             moves[moveIdx++] = (fromHasMoved << 24) | (singlePushIndex << 8) | (fromBoardIndex);
           }
@@ -332,7 +332,7 @@ export default class Engine {
     
     // promoted piece if required
     if (promotionPiece) {
-      this.chessboard.board[toIndex] &= ~(PIECE_MASK);    // remove piece type
+      this.chessboard.board[toIndex] &= ~(PIECE_MASK.TYPE);    // remove piece type
       this.chessboard.board[toIndex] |= promotionPiece;   // add promoted piece type
     }
 
@@ -553,18 +553,20 @@ export default class Engine {
     const queensideCastle = move & ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE;
     const fromIndex = move & ENCODED_MOVE.FROM_INDEX;
     if (kingsideCastle) {
-      const eastIndex = fromIndex + DIRECTION.EAST;
-      const eastSquare = this.chessboard.board[eastIndex];
-      const kingsideCastleMove = (ENCODED_MOVE.PIECE_FROM_HAS_MOVED) | (eastSquare << 16) | (eastIndex << 8) | (fromIndex);
-      this.makeMove(kingsideCastleMove);
-      if(this.kingIsInCheck(turnColour)) {
-        this.unmakeMove(kingsideCastleMove)
-        return false;
+      for (let i = 0; i <= 1; i++) {
+        const eastIndex = fromIndex + (DIRECTION.EAST * i);
+        const eastSquare = this.chessboard.board[eastIndex];
+        const kingsideCastleMove = (ENCODED_MOVE.PIECE_FROM_HAS_MOVED) | (eastSquare << 16) | (eastIndex << 8) | (fromIndex);
+        this.makeMove(kingsideCastleMove);
+        if(this.kingIsInCheck(turnColour)) {
+          this.unmakeMove(kingsideCastleMove)
+          return false;
+        }
+        this.unmakeMove(kingsideCastleMove);
       }
-      this.unmakeMove(kingsideCastleMove);
     }
     else if (queensideCastle) {
-      for (let i = 1; i <= 2; i++) {
+      for (let i = 0; i <= 2; i++) {
         const westIndex = fromIndex + (DIRECTION.WEST * i);
         const westSquare = this.chessboard.board[westIndex];
         const queensideCastleMove = (ENCODED_MOVE.PIECE_FROM_HAS_MOVED) | (westSquare << 16) | (westIndex << 8) | (fromIndex);
@@ -598,7 +600,7 @@ export default class Engine {
     return [legalMoves, moveIdx];
   }
 
-  perft(depth: number) {
+  perft(depth: number, outputIndividual = false, firstMove = true) {
     let nodes = 0;
     const [legalMoves, moveCount] = this.generateLegalMoves((this.chessboard.state[this.chessboard.ply] & BOARD_STATES.CURRENT_TURN_WHITE) ? PIECE.IS_WHITE : PIECE.IS_BLACK);
 
@@ -606,13 +608,35 @@ export default class Engine {
       return 1;
     }
     else if (depth === 1) {
+      if (outputIndividual && firstMove) {
+        for (let i = 0; i < moveCount; i++) {
+          const from = this.chessboard.indexToAlgebraic(legalMoves[i] & ENCODED_MOVE.FROM_INDEX).toLowerCase();
+          const to = this.chessboard.indexToAlgebraic((legalMoves[i] & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
+          const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((legalMoves[i] & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
+          console.log(`${from}${to}${promotion}: 1`)
+        }
+        console.log(`\nNodes searched: ${moveCount}\n`);
+      }
       return moveCount;
     }
 
     for (let i = 0; i < moveCount; i++) {
+      let childnodes = 0;
       this.makeMove(legalMoves[i]);
-      nodes += this.perft(depth - 1);
+      childnodes += this.perft(depth - 1, false, false);
       this.unmakeMove(legalMoves[i]);
+
+      nodes += childnodes;
+      if (firstMove && outputIndividual) {
+        const from = this.chessboard.indexToAlgebraic(legalMoves[i] & ENCODED_MOVE.FROM_INDEX).toLowerCase();
+        const to = this.chessboard.indexToAlgebraic((legalMoves[i] & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
+        const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((legalMoves[i] & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
+        console.log(`${from}${to}${promotion === '.' ? '' : promotion}: ${childnodes}`)
+      }
+    }
+    
+    if (outputIndividual) {
+      console.log(`\nNodes searched: ${nodes}\n`);
     }
 
     return nodes;
