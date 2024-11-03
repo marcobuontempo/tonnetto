@@ -637,7 +637,7 @@ export default class Engine {
     return score;
   }
 
-  negamax(depth: number, turnColour: number) {
+  negamax(depth: number, turnColour: number, alpha = -Infinity, beta = Infinity) {
     if (depth === 0) {
       return { score: this.evaluate(turnColour), bestMove: 0 };
     }
@@ -652,13 +652,19 @@ export default class Engine {
     for (let i = 0; i < moveCount; i++) {
       const move = moves[i];
       this.makeMove(move);
-      let { score } = this.negamax(depth - 1, opponentColour);
+      let { score } = this.negamax(depth - 1, opponentColour, -beta, -alpha);
       score *= -1;
       this.unmakeMove(move);
       
       if (score > maxScore) {
         maxScore = score;
         bestMove = move;
+      }
+
+      // alpha-beta pruning
+      alpha = Math.max(alpha, maxScore);
+      if (beta <= alpha) {
+        break;
       }
     }
     
