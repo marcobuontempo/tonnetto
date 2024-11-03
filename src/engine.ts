@@ -1,5 +1,5 @@
 import ChessBoard from "./chessboard";
-import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, PROMOTION_PIECES, SLIDERS, SQUARE, SQUARE_ASCII } from "./constants";
+import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, PROMOTION_PIECES, SLIDERS, SQUARE, SQUARE_ASCII, PIECE_EVAL_VALUES } from "./constants";
 
 export default class Engine {
   public chessboard: ChessBoard;
@@ -23,6 +23,140 @@ export default class Engine {
         this.kingPositions[positionIndex] = boardIndex;
       }
     }
+  }
+
+  kingIsInCheck(kingColour: number) {
+    // get king position
+    const cacheIndex = (kingColour === PIECE.IS_WHITE) ? 0 : 1;
+    const kingPosition = this.kingPositions[cacheIndex];
+
+    // check for any attacking sliders
+    const straightMoves = MOVE_LIST[PIECE.ROOK];
+    for (let direction of straightMoves) {
+      let currentPosition = kingPosition;
+      while (true) {
+        currentPosition += direction;
+        const currentSquare = this.chessboard.board[currentPosition];
+        const currentPiece = currentSquare & PIECE_MASK.TYPE;
+        const currentColour = currentSquare & PIECE_MASK.COLOUR;
+
+        if (currentSquare === SQUARE.EMPTY) continue;
+        if (currentSquare === SQUARE.EDGE) break;
+        if (currentColour === kingColour) break;
+
+        if (currentPiece === PIECE.ROOK || currentPiece === PIECE.QUEEN) return true; // piece is under attack
+        break;  // piece is protected from sliders by a non-slider opponent piece
+      }
+    }
+
+    const diagonalMoves = MOVE_LIST[PIECE.BISHOP];
+    for (let direction of diagonalMoves) {
+      let currentPosition = kingPosition;
+      while (true) {
+        currentPosition += direction;
+        const currentSquare = this.chessboard.board[currentPosition];
+        const currentPiece = currentSquare & PIECE_MASK.TYPE;
+        const currentColour = currentSquare & PIECE_MASK.COLOUR;
+
+        if (currentSquare === SQUARE.EMPTY) continue;
+        if (currentSquare === SQUARE.EDGE) break;
+        if (currentColour === kingColour) break;
+
+        if (currentPiece === PIECE.BISHOP || currentPiece === PIECE.QUEEN) return true; // piece is under attack
+        break;  // piece is protected from sliders by a non-slider opponent piece
+      }
+    }
+
+    // check for attacking knights
+    const knightMoves = MOVE_LIST[PIECE.KNIGHT];
+    for (let direction of knightMoves) {
+      const currentSquare = this.chessboard.board[kingPosition + direction];
+      const currentPiece = currentSquare & PIECE_MASK.TYPE;
+      const currentColour = currentSquare & PIECE_MASK.COLOUR;
+      if (currentColour === kingColour) continue;
+      if (currentPiece === PIECE.KNIGHT) return true;  // under attack by knight
+    }
+
+    // check for diagonal pawn moves
+    const pawnIndex = kingColour === PIECE.IS_WHITE ? 1 : 0;    // used to access the black/white pawn's move set. we use the *same* colour moves as the king to check, as we are searching backwards *from* the king, and the same pawn colour mirrors the opponent pawn attacks.
+    const eastPawnIndex = kingPosition + MOVE_LIST[pawnIndex][2];
+    const eastPawnSquare = this.chessboard.board[eastPawnIndex];
+    const eastPawnPiece = eastPawnSquare & PIECE_MASK.TYPE;
+    const eastPawnColour = eastPawnSquare & PIECE_MASK.COLOUR;
+    if (eastPawnColour !== kingColour && eastPawnPiece === PIECE.PAWN) {
+      return true;  // under attack by pawn
+    }
+
+    const westPawnIndex = kingPosition + MOVE_LIST[pawnIndex][3];
+    const westPawnSquare = this.chessboard.board[westPawnIndex];
+    const westPawnPiece = westPawnSquare & PIECE_MASK.TYPE;
+    const westPawnColour = westPawnSquare & PIECE_MASK.COLOUR;
+    if (westPawnColour !== kingColour && westPawnPiece === PIECE.PAWN) {
+      return true;  // under attack by pawn
+    }
+
+    // default return if no attackers found
+    return false;
+  }
+
+  moveIsLegal(move: number, turnColour: number) {
+    this.makeMove(move);
+
+    if (this.kingIsInCheck(turnColour)) {
+      this.unmakeMove(move);
+      return false;
+    }
+
+    this.unmakeMove(move);
+    
+    // check movement square in castle is not in check
+    const kingsideCastle = move & ENCODED_MOVE.KINGSIDE_CASTLE_MOVE;
+    const queensideCastle = move & ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE;
+    const fromIndex = move & ENCODED_MOVE.FROM_INDEX;
+    if (kingsideCastle) {
+      for (let i = 0; i <= 1; i++) {
+        const eastIndex = fromIndex + (DIRECTION.EAST * i);
+        const eastSquare = this.chessboard.board[eastIndex];
+        const kingsideCastleMove = (ENCODED_MOVE.PIECE_FROM_HAS_MOVED) | (eastSquare << 16) | (eastIndex << 8) | (fromIndex);
+        this.makeMove(kingsideCastleMove);
+        if(this.kingIsInCheck(turnColour)) {
+          this.unmakeMove(kingsideCastleMove)
+          return false;
+        }
+        this.unmakeMove(kingsideCastleMove);
+      }
+    }
+    else if (queensideCastle) {
+      for (let i = 0; i <= 2; i++) {
+        const westIndex = fromIndex + (DIRECTION.WEST * i);
+        const westSquare = this.chessboard.board[westIndex];
+        const queensideCastleMove = (ENCODED_MOVE.PIECE_FROM_HAS_MOVED) | (westSquare << 16) | (westIndex << 8) | (fromIndex);
+        this.makeMove(queensideCastleMove);
+        if (this.kingIsInCheck(turnColour)) {
+          this.unmakeMove(queensideCastleMove)
+          return false;
+        }
+        this.unmakeMove(queensideCastleMove);
+      }
+    }
+
+    return true;
+  }
+
+  decodeMove(move: number) {
+    const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX);
+    const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8);
+    const pieceCapture = SQUARE_ASCII[((move & ENCODED_MOVE.PIECE_CAPTURE) >> 16) & (PIECE_MASK.TYPE | PIECE_MASK.COLOUR)];
+    const pieceHasMoved = !!(move & ENCODED_MOVE.PIECE_FROM_HAS_MOVED);
+    const promotionTo = SQUARE_ASCII[(move & ENCODED_MOVE.PROMOTION_TO) >> 25];
+    const enPassant = !!(move & ENCODED_MOVE.EN_PASSANT_MOVE);
+    const doublePush = !!(move & ENCODED_MOVE.DOUBLE_PUSH_MOVE);
+    const kingsideCastle = !!(move & ENCODED_MOVE.KINGSIDE_CASTLE_MOVE);
+    const queensideCastle = !!(move & ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE);
+
+    return (
+      `${from}->${to}${pieceCapture!=='.' ? ' captured:'+pieceCapture : ''}${pieceHasMoved ? ' moved' : ''}${promotionTo!=='.' ? ' promote:'+promotionTo : ''}${enPassant ? ' en-passant' : ''}${doublePush ? ' double-push' : ''}${kingsideCastle ? ' ks-castle' : ''}${queensideCastle ? ' qs-castle' : ''}`
+    );
   }
 
   generatePseudoMoves(turnColour: number): [Uint32Array, number] {
@@ -228,79 +362,23 @@ export default class Engine {
 
     return [moves, moveIdx];
   }
+  
+  generateLegalMoves(turnColour: number): [Uint32Array, number] {
+    const [pseudoMoves, pseudoMoveCount] = this.generatePseudoMoves(turnColour);
+    const legalMoves = new Uint32Array(pseudoMoveCount);
 
-  kingIsInCheck(kingColour: number) {
-    // get king position
-    const cacheIndex = (kingColour === PIECE.IS_WHITE) ? 0 : 1;
-    const kingPosition = this.kingPositions[cacheIndex];
-
-    // check for any attacking sliders
-    const straightMoves = MOVE_LIST[PIECE.ROOK];
-    for (let direction of straightMoves) {
-      let currentPosition = kingPosition;
-      while (true) {
-        currentPosition += direction;
-        const currentSquare = this.chessboard.board[currentPosition];
-        const currentPiece = currentSquare & PIECE_MASK.TYPE;
-        const currentColour = currentSquare & PIECE_MASK.COLOUR;
-
-        if (currentSquare === SQUARE.EMPTY) continue;
-        if (currentSquare === SQUARE.EDGE) break;
-        if (currentColour === kingColour) break;
-
-        if (currentPiece === PIECE.ROOK || currentPiece === PIECE.QUEEN) return true; // piece is under attack
-        break;  // piece is protected from sliders by a non-slider opponent piece
+    
+    let moveIdx = 0;
+    for (let i = 0; i < pseudoMoveCount; i++) {
+      const pseudoMove = pseudoMoves[i];
+      if (pseudoMove === 0) break;
+      
+      if (this.moveIsLegal(pseudoMove, turnColour)) {
+        legalMoves[moveIdx++] = pseudoMove;
       }
     }
 
-    const diagonalMoves = MOVE_LIST[PIECE.BISHOP];
-    for (let direction of diagonalMoves) {
-      let currentPosition = kingPosition;
-      while (true) {
-        currentPosition += direction;
-        const currentSquare = this.chessboard.board[currentPosition];
-        const currentPiece = currentSquare & PIECE_MASK.TYPE;
-        const currentColour = currentSquare & PIECE_MASK.COLOUR;
-
-        if (currentSquare === SQUARE.EMPTY) continue;
-        if (currentSquare === SQUARE.EDGE) break;
-        if (currentColour === kingColour) break;
-
-        if (currentPiece === PIECE.BISHOP || currentPiece === PIECE.QUEEN) return true; // piece is under attack
-        break;  // piece is protected from sliders by a non-slider opponent piece
-      }
-    }
-
-    // check for attacking knights
-    const knightMoves = MOVE_LIST[PIECE.KNIGHT];
-    for (let direction of knightMoves) {
-      const currentSquare = this.chessboard.board[kingPosition + direction];
-      const currentPiece = currentSquare & PIECE_MASK.TYPE;
-      const currentColour = currentSquare & PIECE_MASK.COLOUR;
-      if (currentColour === kingColour) continue;
-      if (currentPiece === PIECE.KNIGHT) return true;  // under attack by knight
-    }
-
-    // check for diagonal pawn moves
-    const pawnIndex = kingColour === PIECE.IS_WHITE ? 1 : 0;    // used to access the black/white pawn's move set. we use the *same* colour moves as the king to check, as we are searching backwards *from* the king, and the same pawn colour mirrors the opponent pawn attacks.
-    const eastPawnIndex = kingPosition + MOVE_LIST[pawnIndex][2];
-    const eastPawnSquare = this.chessboard.board[eastPawnIndex];
-    const eastPawnPiece = eastPawnSquare & PIECE_MASK.TYPE;
-    const eastPawnColour = eastPawnSquare & PIECE_MASK.COLOUR;
-    if (eastPawnColour !== kingColour && eastPawnPiece === PIECE.PAWN) {
-      return true;  // under attack by pawn
-    }
-
-    const westPawnIndex = kingPosition + MOVE_LIST[pawnIndex][3];
-    const westPawnSquare = this.chessboard.board[westPawnIndex];
-    const westPawnPiece = westPawnSquare & PIECE_MASK.TYPE;
-    const westPawnColour = westPawnSquare & PIECE_MASK.COLOUR;
-    if (westPawnColour !== kingColour && westPawnPiece === PIECE.PAWN) {
-      return true;  // under attack by pawn
-    }
-
-    // default return if no attackers found
-    return false;
+    return [legalMoves, moveIdx];
   }
 
   makeMove(move: number) {
@@ -537,67 +615,26 @@ export default class Engine {
       }
     }  
   }
-  
-  moveIsLegal(move: number, turnColour: number) {
-    this.makeMove(move);
 
-    if (this.kingIsInCheck(turnColour)) {
-      this.unmakeMove(move);
-      return false;
-    }
+  evaluate(turnColour: number) {
+    let score = 0;
+    for (let i = 0; i < 64; i++) {
+      const boardIndex = MAILBOX64[i];
+      const square = this.chessboard.board[boardIndex];
 
-    this.unmakeMove(move);
-    
-    // check movement square in castle is not in check
-    const kingsideCastle = move & ENCODED_MOVE.KINGSIDE_CASTLE_MOVE;
-    const queensideCastle = move & ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE;
-    const fromIndex = move & ENCODED_MOVE.FROM_INDEX;
-    if (kingsideCastle) {
-      for (let i = 0; i <= 1; i++) {
-        const eastIndex = fromIndex + (DIRECTION.EAST * i);
-        const eastSquare = this.chessboard.board[eastIndex];
-        const kingsideCastleMove = (ENCODED_MOVE.PIECE_FROM_HAS_MOVED) | (eastSquare << 16) | (eastIndex << 8) | (fromIndex);
-        this.makeMove(kingsideCastleMove);
-        if(this.kingIsInCheck(turnColour)) {
-          this.unmakeMove(kingsideCastleMove)
-          return false;
-        }
-        this.unmakeMove(kingsideCastleMove);
-      }
-    }
-    else if (queensideCastle) {
-      for (let i = 0; i <= 2; i++) {
-        const westIndex = fromIndex + (DIRECTION.WEST * i);
-        const westSquare = this.chessboard.board[westIndex];
-        const queensideCastleMove = (ENCODED_MOVE.PIECE_FROM_HAS_MOVED) | (westSquare << 16) | (westIndex << 8) | (fromIndex);
-        this.makeMove(queensideCastleMove);
-        if (this.kingIsInCheck(turnColour)) {
-          this.unmakeMove(queensideCastleMove)
-          return false;
-        }
-        this.unmakeMove(queensideCastleMove);
-      }
-    }
-
-    return true;
-  }
-  
-  generateLegalMoves(turnColour: number): [Uint32Array, number] {
-    const [pseudoMoves, pseudoMoveCount] = this.generatePseudoMoves(turnColour);
-    const legalMoves = new Uint32Array(pseudoMoveCount);
-
-    
-    let moveIdx = 0;
-    for (let i = 0; i < pseudoMoveCount; i++) {
-      const pseudoMove = pseudoMoves[i];
-      if (pseudoMove === 0) break;
+      if (square === SQUARE.EMPTY) continue;  // skip empty squares for eval
       
-      if (this.moveIsLegal(pseudoMove, turnColour)) {
-        legalMoves[moveIdx++] = pseudoMove;
-      }
+      const piece = square & PIECE_MASK.TYPE;
+      const colour = square & PIECE_MASK.COLOUR;
+
+      score += PIECE_EVAL_VALUES[(piece | colour)];
     }
 
-    return [legalMoves, moveIdx];
+    if (turnColour === PIECE.IS_BLACK) {
+      score *= -1;
+    }
+
+    return score;
   }
 
   perft(depth: number, outputIndividual = false, firstMove = true) {
@@ -640,22 +677,6 @@ export default class Engine {
     }
 
     return nodes;
-  }
-
-  decodeMove(move: number) {
-    const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX);
-    const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8);
-    const pieceCapture = SQUARE_ASCII[((move & ENCODED_MOVE.PIECE_CAPTURE) >> 16) & (PIECE_MASK.TYPE | PIECE_MASK.COLOUR)];
-    const pieceHasMoved = !!(move & ENCODED_MOVE.PIECE_FROM_HAS_MOVED);
-    const promotionTo = SQUARE_ASCII[(move & ENCODED_MOVE.PROMOTION_TO) >> 25];
-    const enPassant = !!(move & ENCODED_MOVE.EN_PASSANT_MOVE);
-    const doublePush = !!(move & ENCODED_MOVE.DOUBLE_PUSH_MOVE);
-    const kingsideCastle = !!(move & ENCODED_MOVE.KINGSIDE_CASTLE_MOVE);
-    const queensideCastle = !!(move & ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE);
-
-    return (
-      `${from}->${to}${pieceCapture!=='.' ? ' captured:'+pieceCapture : ''}${pieceHasMoved ? ' moved' : ''}${promotionTo!=='.' ? ' promote:'+promotionTo : ''}${enPassant ? ' en-passant' : ''}${doublePush ? ' double-push' : ''}${kingsideCastle ? ' ks-castle' : ''}${queensideCastle ? ' qs-castle' : ''}`
-    );
   }
 }
 
