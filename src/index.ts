@@ -14,3 +14,6 @@ console.log(perft, time);
 // for (let i = 0; i < moveCount; i++) {
 //   console.log(engine.decodeMove(moves[i]));
 // }
+
+
+// PERFT5: 1780 (outlier 2300)

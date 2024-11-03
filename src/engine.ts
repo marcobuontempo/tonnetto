@@ -32,7 +32,8 @@ export default class Engine {
 
     // check for any attacking sliders
     const straightMoves = MOVE_LIST[PIECE.ROOK];
-    for (let direction of straightMoves) {
+    for (let i = 0; i < straightMoves.length; i++) {
+      const direction = straightMoves[i];
       let currentPosition = kingPosition;
       while (true) {
         currentPosition += direction;
@@ -50,7 +51,8 @@ export default class Engine {
     }
 
     const diagonalMoves = MOVE_LIST[PIECE.BISHOP];
-    for (let direction of diagonalMoves) {
+    for (let i = 0; i < diagonalMoves.length; i++) {
+      const direction = diagonalMoves[i];
       let currentPosition = kingPosition;
       while (true) {
         currentPosition += direction;
@@ -69,7 +71,8 @@ export default class Engine {
 
     // check for attacking knights
     const knightMoves = MOVE_LIST[PIECE.KNIGHT];
-    for (let direction of knightMoves) {
+    for (let i = 0; i < knightMoves.length; i++) {
+      const direction = knightMoves[i];
       const currentSquare = this.chessboard.board[kingPosition + direction];
       const currentPiece = currentSquare & PIECE_MASK.TYPE;
       const currentColour = currentSquare & PIECE_MASK.COLOUR;
@@ -159,7 +162,7 @@ export default class Engine {
     );
   }
 
-  generatePseudoMoves(turnColour: number): [Uint32Array, number] {
+  generatePseudoMoves(turnColour: number): Uint32Array {
     const moves = new Uint32Array(256);
     let moveIdx = 0;
 
@@ -182,7 +185,8 @@ export default class Engine {
       const directions = MOVE_LIST[pieceMovesIndex];
       const slider = SLIDERS[pieceMovesIndex];
  
-      for (let direction of directions) {
+      for (let j = 0; j < directions.length; j++) {
+        const direction = directions[j];
         let toBoardIndex = fromBoardIndex;  // initialise from the current square, and we will add directions to it next during generation
 
         while (true) {
@@ -235,7 +239,8 @@ export default class Engine {
           }
           else {
             // single push with promotion
-            for (let promotionPiece of PROMOTION_PIECES) {
+            for (let j = 0; j < PROMOTION_PIECES.length; j++) {
+              const promotionPiece = PROMOTION_PIECES[j];
               moves[moveIdx++] = (promotionPiece << 25) | (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
             }
           }
@@ -267,7 +272,8 @@ export default class Engine {
           }
           else {
             // east diagonal piece capture with promotion
-            for (let promotionPiece of PROMOTION_PIECES) {
+            for (let j = 0; j < PROMOTION_PIECES.length; j++) {
+              const promotionPiece = PROMOTION_PIECES[j];
               moves[moveIdx++] = (promotionPiece << 25) | (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
@@ -288,7 +294,8 @@ export default class Engine {
           }
           else {
             // west diagonal piece capture with promotion
-            for (let promotionPiece of PROMOTION_PIECES) {
+            for (let j = 0; j < PROMOTION_PIECES.length; j++) {
+              const promotionPiece = PROMOTION_PIECES[j];
               moves[moveIdx++] = (promotionPiece << 25) | (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
@@ -360,16 +367,16 @@ export default class Engine {
       }
     }
 
-    return [moves, moveIdx];
+    return moves.subarray(0, moveIdx);
   }
   
-  generateLegalMoves(turnColour: number): [Uint32Array, number] {
-    const [pseudoMoves, pseudoMoveCount] = this.generatePseudoMoves(turnColour);
-    const legalMoves = new Uint32Array(pseudoMoveCount);
+  generateLegalMoves(turnColour: number): Uint32Array {
+    const pseudoMoves = this.generatePseudoMoves(turnColour);
+    const legalMoves = new Uint32Array(pseudoMoves.length);
 
     
     let moveIdx = 0;
-    for (let i = 0; i < pseudoMoveCount; i++) {
+    for (let i = 0; i < pseudoMoves.length; i++) {
       const pseudoMove = pseudoMoves[i];
       if (pseudoMove === 0) break;
       
@@ -378,7 +385,7 @@ export default class Engine {
       }
     }
 
-    return [legalMoves, moveIdx];
+    return legalMoves.subarray(0, moveIdx);
   }
 
   makeMove(move: number) {
@@ -647,9 +654,9 @@ export default class Engine {
     let maxScore = -Infinity;
     let bestMove = 0;
 
-    const [moves, moveCount] = this.generateLegalMoves(turnColour);
+    const moves = this.generateLegalMoves(turnColour);
 
-    for (let i = 0; i < moveCount; i++) {
+    for (let i = 0; i < moves.length; i++) {
       const move = moves[i];
       this.makeMove(move);
       let { score } = this.negamax(depth - 1, opponentColour, -beta, -alpha);
@@ -676,35 +683,37 @@ export default class Engine {
 
   perft(depth: number, outputIndividual = false, firstMove = true) {
     let nodes = 0;
-    const [legalMoves, moveCount] = this.generateLegalMoves((this.chessboard.state[this.chessboard.ply] & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK);
+    const legalMoves = this.generateLegalMoves((this.chessboard.state[this.chessboard.ply] & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK);
 
     if (depth === 0) {
       return 1;
     }
     else if (depth === 1) {
       if (outputIndividual && firstMove) {
-        for (let i = 0; i < moveCount; i++) {
-          const from = this.chessboard.indexToAlgebraic(legalMoves[i] & ENCODED_MOVE.FROM_INDEX).toLowerCase();
-          const to = this.chessboard.indexToAlgebraic((legalMoves[i] & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
-          const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((legalMoves[i] & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
+        for (let i = 0; i < legalMoves.length; i++) {
+          const move = legalMoves[i];
+          const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX).toLowerCase();
+          const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
+          const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((move & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
           console.log(`${from}${to}${promotion}: 1`)
         }
-        console.log(`\nNodes searched: ${moveCount}\n`);
+        console.log(`\nNodes searched: ${legalMoves.length}\n`);
       }
-      return moveCount;
+      return legalMoves.length;
     }
 
-    for (let i = 0; i < moveCount; i++) {
+    for (let i = 0; i < legalMoves.length; i++) {
+      const move = legalMoves[i];
       let childnodes = 0;
-      this.makeMove(legalMoves[i]);
+      this.makeMove(move);
       childnodes += this.perft(depth - 1, false, false);
-      this.unmakeMove(legalMoves[i]);
+      this.unmakeMove(move);
 
       nodes += childnodes;
       if (firstMove && outputIndividual) {
-        const from = this.chessboard.indexToAlgebraic(legalMoves[i] & ENCODED_MOVE.FROM_INDEX).toLowerCase();
-        const to = this.chessboard.indexToAlgebraic((legalMoves[i] & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
-        const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((legalMoves[i] & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
+        const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX).toLowerCase();
+        const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
+        const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((move & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
         console.log(`${from}${to}${promotion === '.' ? '' : promotion}: ${childnodes}`)
       }
     }
