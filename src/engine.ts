@@ -1,5 +1,5 @@
 import ChessBoard from "./chessboard";
-import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, PROMOTION_PIECES, SLIDERS, SQUARE, SQUARE_ASCII, PIECE_EVAL_VALUES } from "./constants";
+import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, PROMOTION_PIECES, SLIDERS, SQUARE, SQUARE_ASCII, PIECE_EVAL_VALUES, TURN } from "./constants";
 
 export default class Engine {
   public chessboard: ChessBoard;
@@ -637,9 +637,40 @@ export default class Engine {
     return score;
   }
 
+  negamax(depth: number, turnColour: number) {
+    if (depth === 0) {
+      return { score: this.evaluate(turnColour), bestMove: 0 };
+    }
+
+    const opponentColour = turnColour === TURN.WHITE ? TURN.BLACK : TURN.WHITE;
+
+    let maxScore = -Infinity;
+    let bestMove = 0;
+
+    const [moves, moveCount] = this.generateLegalMoves(turnColour);
+
+    for (let i = 0; i < moveCount; i++) {
+      const move = moves[i];
+      this.makeMove(move);
+      let { score } = this.negamax(depth - 1, opponentColour);
+      score *= -1;
+      this.unmakeMove(move);
+      
+      if (score > maxScore) {
+        maxScore = score;
+        bestMove = move;
+      }
+    }
+    
+    return {
+      score: maxScore,
+      bestMove: bestMove,
+    };
+  }
+
   perft(depth: number, outputIndividual = false, firstMove = true) {
     let nodes = 0;
-    const [legalMoves, moveCount] = this.generateLegalMoves((this.chessboard.state[this.chessboard.ply] & BOARD_STATES.CURRENT_TURN_WHITE) ? PIECE.IS_WHITE : PIECE.IS_BLACK);
+    const [legalMoves, moveCount] = this.generateLegalMoves((this.chessboard.state[this.chessboard.ply] & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK);
 
     if (depth === 0) {
       return 1;

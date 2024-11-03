@@ -157,6 +157,11 @@ export const ENCODED_MOVE = {
 
 /* BOARD STATE */
 
+export const TURN = {
+  WHITE: PIECE.IS_WHITE,
+  BLACK: PIECE.IS_BLACK,
+};
+
 export const BOARD_STATES = {
   EMPTY:                    0b0000_0000_0000_0000_0000_0000_0000_0000,
   HALFMOVE_CLOCK:           0b0000_0000_0000_0000_0000_0000_0111_1111,
