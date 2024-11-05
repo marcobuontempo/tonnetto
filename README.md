@@ -1,6 +1,7 @@
 # tonnetto-chess
 
-- typescript - inspired by stockfish
+IMPLEMENTED
+- typescript chess - tonnetto, inspired by stockfish
 - perft valid as per https://www.chessprogramming.org/Perft_Results
 - typed arrays for faster-operation
 - encoding using bits for pieces, moves, board state
@@ -10,10 +11,14 @@
 
 
 TODO Features:
-- UCI compliant
+- UCI compliance
 - run as standalone engine in command-line, browser, or frontend
-- quiescence search
+- quiescence search (to stabilise position's and search)
+- MVV-LVA sorting
+- opening book and/or endgame tablebases
 
 
 TODO tasks:
-- check isEndGame 
+- check isEndGame in negamax search
+- reduce branching factor with better and faster pruning
+- refactor code to improve performance (generate moves, is move legal, evaluate position, search)

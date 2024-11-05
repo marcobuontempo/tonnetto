@@ -53,16 +53,20 @@ export default class Engine {
     for (let m = 0; m < straightMoves.length; m++) {
       const direction = straightMoves[m];
       let currentPosition = kingPosition;
+      let firstSquare = true;  // to flag a check for opponent king on the first square
       while (true) {
         currentPosition += direction;
         const currentSquare = this.chessboard.board[currentPosition];
         const currentPiece = currentSquare & PIECE_MASK.TYPE;
         const currentColour = currentSquare & PIECE_MASK.COLOUR;
 
+        if (firstSquare && currentPiece === PIECE.KING) return true;  // piece is under attack by opponent king
+
+        firstSquare = false;
         if (currentSquare === SQUARE.EMPTY) continue;
         if (currentSquare === SQUARE.EDGE) break;
         if (currentColour === kingColour) break;
-
+      
         if (currentPiece === PIECE.ROOK || currentPiece === PIECE.QUEEN) return true; // piece is under attack
         break;  // piece is protected from sliders by a non-slider opponent piece
       }
@@ -71,11 +75,15 @@ export default class Engine {
     for (let m = 0; m < diagonalMoves.length; m++) {
       const direction = diagonalMoves[m];
       let currentPosition = kingPosition;
+      let firstSquare = true;
       while (true) {
         currentPosition += direction;
         const currentSquare = this.chessboard.board[currentPosition];
         const currentPiece = currentSquare & PIECE_MASK.TYPE;
         const currentColour = currentSquare & PIECE_MASK.COLOUR;
+
+        if (firstSquare && currentPiece === PIECE.KING) return true;  // piece is under attack by opponent king
+        firstSquare = false;
 
         if (currentSquare === SQUARE.EMPTY) continue;
         if (currentSquare === SQUARE.EDGE) break;
@@ -95,14 +103,6 @@ export default class Engine {
       const currentColour = currentSquare & PIECE_MASK.COLOUR;
       if (currentColour === kingColour) continue;
       if (currentPiece === PIECE.KNIGHT) return true;  // under attack by knight
-    }
-    
-    // check for opponent king
-    const kingMoves = MOVE_LIST[PIECE.KING];
-    for (let m = 0; m < kingMoves.length; m++) {
-      const direction = kingMoves[m];
-      const piece = (this.chessboard.board[kingPosition + direction]) & PIECE_MASK.TYPE;
-      if (piece === PIECE.KING) return true;  // under attack by another king
     }
 
     // check for diagonal pawn moves
@@ -694,6 +694,7 @@ export default class Engine {
     return ((mgScore * mgPhase) + (egScore * egPhase)) / 24;  // normalise score, weighted by phase of the game
   }
 
+  public mynodes = 0;
   negamax(depth: number, turnColour: number, alpha = -Infinity, beta = Infinity) {
     if (depth === 0) {
       return { score: this.evaluate(turnColour), bestMove: 0 };
@@ -707,6 +708,7 @@ export default class Engine {
     const moves = this.generateLegalMoves(turnColour);
 
     for (let m = 0; m < moves.length; m++) {
+      this.mynodes++;
       const move = moves[m];
       this.makeMove(move);
       let { score } = this.negamax(depth - 1, opponentColour, -beta, -alpha);
@@ -732,6 +734,7 @@ export default class Engine {
   }
 
   perft(depth: number, outputIndividual = false, firstMove = true) {
+    const startTime = performance.now();
     let nodes = 0;
     const legalMoves = this.generateLegalMoves((this.chessboard.state[this.chessboard.ply] & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK);
 
@@ -768,8 +771,11 @@ export default class Engine {
       }
     }
     
+    const nodesPerSecond = (nodes / ((performance.now() - startTime)/ 1000)).toFixed(2);
+
     if (outputIndividual) {
-      console.log(`\nNodes searched: ${nodes}\n`);
+      console.log(`\nNodes: ${nodes}`);
+      console.log(`Speed: ${nodesPerSecond}/sec\n`)
     }
 
     return nodes;
