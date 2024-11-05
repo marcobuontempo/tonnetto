@@ -16,8 +16,8 @@ export default class ChessBoard {
     const piecesFEN = boardFEN.replace(/\//g, "");
 
     let boardIndex = 0;
-    for (let i = 0; i < piecesFEN.length; i++) {
-      const pieceFEN = piecesFEN[i];
+    for (let p = 0; p < piecesFEN.length; p++) {
+      const pieceFEN = piecesFEN[p];
       if (parseInt(pieceFEN)) {
         boardIndex += parseInt(pieceFEN);
       }
@@ -40,9 +40,9 @@ export default class ChessBoard {
     }
 
     // embed 8x8 board into 10x12 internal `this.board`
-    for (let i = 0; i < 64; i++) {
-      const newIdx = MAILBOX64[i];
-      this.board[newIdx] = board64[i];
+    for (let sq = 0; sq < 64; sq++) {
+      const squareIdx = MAILBOX64[sq];
+      this.board[squareIdx] = board64[sq];
     }
 
     const currentTurn = turnFEN === 'w' ? BOARD_STATES.CURRENT_TURN_WHITE : BOARD_STATES.CURRENT_TURN_BLACK;
@@ -68,7 +68,56 @@ export default class ChessBoard {
   }
 
   getFen() {
-    return 'TODO';
+    let boardPosition = Array.from({ length: 8 }, () => Array(8).fill(''));
+
+    // get board squares
+    for (let sq = 0; sq < 64; sq++) {
+      const squareIdx = MAILBOX64[sq];
+      const square = this.board[squareIdx];
+      
+      const rank = Math.floor(sq / 8);
+      const file = sq % 8;
+      
+      const piece = square & PIECE_MASK.TYPE;
+      const colour = square & PIECE_MASK.COLOUR;
+      const ascii = SQUARE_ASCII[piece | colour];
+      
+      boardPosition[rank][file] = ascii;
+    }
+
+    // format board into string
+    const boardFEN = boardPosition.map(rank => {
+      let emptyCount = 0;
+      return rank.reduce((fenStr, square) => {
+        if (square === '.') {
+          emptyCount++;
+        } else {
+          // Append empty square count if any
+          if (emptyCount > 0) {
+            fenStr += emptyCount;
+            emptyCount = 0; // Reset count
+          }
+          fenStr += square; // Append the piece
+        }
+        return fenStr;
+      }, '') + (emptyCount > 0 ? emptyCount : ''); // Append any remaining empty squares
+    }).join('/'); // Join ranks with '/'
+
+    const currentState = this.state[this.ply];
+    const currentTurnFEN = (currentState & BOARD_STATES.CURRENT_TURN_WHITE) ? 'w' : 'b';
+    
+    const ksCastleWhite = (currentState & BOARD_STATES.WHITE_KINGSIDE_CASTLE) ? 'K' : '';
+    const qsCastleWhite = (currentState & BOARD_STATES.WHITE_QUEENSIDE_CASTLE) ? 'Q' : '';
+    const ksCastleBlack = (currentState & BOARD_STATES.BLACK_KINGSIDE_CASTLE) ? 'k' : '';
+    const qsCastleBlack = (currentState & BOARD_STATES.BLACK_QUEENSIDE_CASTLE) ? 'q' : '';
+    const castleFEN = (ksCastleWhite + qsCastleWhite + ksCastleBlack + qsCastleBlack) || '-'
+
+    const epFEN = ChessBoard.indexToAlgebraic((currentState & BOARD_STATES.EN_PASSANT_SQUARE) >> 8) || '-';
+
+    const halfmoveFEN = (currentState & BOARD_STATES.HALFMOVE_CLOCK);
+
+    const fullmoveFEN = Math.floor((this.ply + 1) / 2);
+    return `${boardFEN} ${currentTurnFEN} ${epFEN} ${castleFEN} ${halfmoveFEN} ${fullmoveFEN}`;
   }
 
   static algebraicToIndex(notation: string): number {

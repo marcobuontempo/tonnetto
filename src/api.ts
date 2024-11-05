@@ -22,6 +22,11 @@ export default class ChessEngineAPI {
     this.initialFEN = fen;
   }
 
+  /* gets the current board FEN */
+  getFen() {
+    return this.engine.chessboard.getFen();
+  }
+
   /* resets board to the last provided FEN */
   resetBoard() {
     this.engine = new Engine(this.initialFEN);
