@@ -44,25 +44,26 @@ export default class Engine {
   }
 
   kingIsInCheck(kingColour: number) {
-    // get king position
-    const cacheIndex = (kingColour === PIECE.IS_WHITE) ? 0 : 1;
-    const kingPosition = this.kingPositions[cacheIndex];
+    // get king positions (in reference to king colour)
+    let [kingPosition, opponentKingPosition] = this.kingPositions; 
+    if (kingColour === PIECE.IS_BLACK) {
+      const tmp = kingPosition;
+      kingPosition = opponentKingPosition;
+      opponentKingPosition = tmp;
+    }
 
     // check for any attacking sliders (straight and diagonal)
     const straightMoves = MOVE_LIST[PIECE.ROOK];
     for (let m = 0; m < straightMoves.length; m++) {
       const direction = straightMoves[m];
       let currentPosition = kingPosition;
-      let firstSquare = true;  // to flag a check for opponent king on the first square
+      if ((kingPosition + direction) === opponentKingPosition) return true; // piece is attacked by opponent king
       while (true) {
         currentPosition += direction;
         const currentSquare = this.chessboard.board[currentPosition];
         const currentPiece = currentSquare & PIECE_MASK.TYPE;
         const currentColour = currentSquare & PIECE_MASK.COLOUR;
 
-        if (firstSquare && currentPiece === PIECE.KING) return true;  // piece is under attack by opponent king
-
-        firstSquare = false;
         if (currentSquare === SQUARE.EMPTY) continue;
         if (currentSquare === SQUARE.EDGE) break;
         if (currentColour === kingColour) break;
@@ -75,15 +76,12 @@ export default class Engine {
     for (let m = 0; m < diagonalMoves.length; m++) {
       const direction = diagonalMoves[m];
       let currentPosition = kingPosition;
-      let firstSquare = true;
+      if ((kingPosition + direction) === opponentKingPosition) return true; // piece is attacked by opponent king
       while (true) {
         currentPosition += direction;
         const currentSquare = this.chessboard.board[currentPosition];
         const currentPiece = currentSquare & PIECE_MASK.TYPE;
         const currentColour = currentSquare & PIECE_MASK.COLOUR;
-
-        if (firstSquare && currentPiece === PIECE.KING) return true;  // piece is under attack by opponent king
-        firstSquare = false;
 
         if (currentSquare === SQUARE.EMPTY) continue;
         if (currentSquare === SQUARE.EDGE) break;
@@ -171,9 +169,9 @@ export default class Engine {
     return true;
   }
 
-  decodeMove(move: number) {
-    const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX);
-    const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8);
+  decodeMoveData(move: number) {
+    const from = ChessBoard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX);
+    const to = ChessBoard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8);
     const pieceCapture = SQUARE_ASCII[((move & ENCODED_MOVE.PIECE_CAPTURE) >> 16) & (PIECE_MASK.TYPE | PIECE_MASK.COLOUR)];
     const pieceHasMoved = !!(move & ENCODED_MOVE.PIECE_FROM_HAS_MOVED);
     const promotionTo = SQUARE_ASCII[((move & ENCODED_MOVE.PROMOTION_TO) >> 25) | PIECE.IS_BLACK];  // IS_BLACK just to get lowercase ascii
@@ -185,6 +183,18 @@ export default class Engine {
     return (
       `${from}->${to}${pieceCapture!=='.' ? ' captured:'+pieceCapture : ''}${pieceHasMoved ? ' moved' : ''}${promotionTo ? ' promote:'+promotionTo : ''}${enPassant ? ' en-passant' : ''}${doublePush ? ' double-push' : ''}${kingsideCastle ? ' ks-castle' : ''}${queensideCastle ? ' qs-castle' : ''}`
     );
+  }
+
+  static encodedMoveToAlgebraic(move: number) {
+    const from = ChessBoard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX);
+    const to = ChessBoard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8);
+    return `${from}${to}`;
+  }
+
+  static algebraicMoveToIndexes(move: string) {
+    const from = ChessBoard.algebraicToIndex(move.substring(0,2));
+    const to = ChessBoard.algebraicToIndex(move.substring(2,4));
+    return [from, to];
   }
 
   generatePseudoMoves(turnColour: number): Uint32Array {
@@ -694,7 +704,6 @@ export default class Engine {
     return ((mgScore * mgPhase) + (egScore * egPhase)) / 24;  // normalise score, weighted by phase of the game
   }
 
-  public mynodes = 0;
   negamax(depth: number, turnColour: number, alpha = -Infinity, beta = Infinity) {
     if (depth === 0) {
       return { score: this.evaluate(turnColour), bestMove: 0 };
@@ -708,7 +717,6 @@ export default class Engine {
     const moves = this.generateLegalMoves(turnColour);
 
     for (let m = 0; m < moves.length; m++) {
-      this.mynodes++;
       const move = moves[m];
       this.makeMove(move);
       let { score } = this.negamax(depth - 1, opponentColour, -beta, -alpha);
@@ -745,8 +753,8 @@ export default class Engine {
       if (outputIndividual && firstMove) {
         for (let m = 0; m < legalMoves.length; m++) {
           const move = legalMoves[m];
-          const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX).toLowerCase();
-          const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
+          const from = ChessBoard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX).toLowerCase();
+          const to = ChessBoard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
           const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((move & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
           console.log(`${from}${to}${promotion}: 1`)
         }
@@ -764,8 +772,8 @@ export default class Engine {
 
       nodes += childnodes;
       if (firstMove && outputIndividual) {
-        const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX).toLowerCase();
-        const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
+        const from = ChessBoard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX).toLowerCase();
+        const to = ChessBoard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
         const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((move & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
         console.log(`${from}${to}${promotion === '.' ? '' : promotion}: ${childnodes}`)
       }
@@ -775,7 +783,7 @@ export default class Engine {
 
     if (outputIndividual) {
       console.log(`\nNodes: ${nodes}`);
-      console.log(`Speed: ${nodesPerSecond}/sec\n`)
+      console.log(`Speed: ${nodesPerSecond} / sec\n`)
     }
 
     return nodes;

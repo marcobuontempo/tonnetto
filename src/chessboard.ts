@@ -53,7 +53,7 @@ export default class ChessBoard {
     if (castleFEN.includes('k')) castleRights |= BOARD_STATES.BLACK_KINGSIDE_CASTLE;
     if (castleFEN.includes('q')) castleRights |= BOARD_STATES.BLACK_QUEENSIDE_CASTLE;
 
-    const enPassantTarget = epFEN === "-" ? 0 : this.algebraicToIndex(epFEN) << 8;
+    const enPassantTarget = epFEN === "-" ? 0 : ChessBoard.algebraicToIndex(epFEN) << 8;
 
     const halfmove = parseInt(halfmoveFEN);
 
@@ -67,18 +67,22 @@ export default class ChessBoard {
     this.state[ply] = state;
   }
 
-  algebraicToIndex(notation: string): number {
-    const [fileCh, rankCh] = notation.split("");
+  getFen() {
+    return 'TODO';
+  }
+
+  static algebraicToIndex(notation: string): number {
+    const [fileCh, rankCh] = notation.toLowerCase().split("");
     const file = fileCh.charCodeAt(0) - 97;
     const rank = 64 - parseInt(rankCh) * 8;
     return MAILBOX64[file + rank];
   }
 
-  indexToAlgebraic(index: number) {
+  static indexToAlgebraic(index: number) {
     const mailbox64 = MAILBOX120[index];
     const file = String.fromCharCode((mailbox64 % 8) + 65);
     const rank = 8 - Math.floor(mailbox64 / 8);
-    return `${file}${rank}`;
+    return `${file.toLowerCase()}${rank}`;
   }
 
   printBoard() {
