@@ -163,8 +163,10 @@ export default class Engine {
   }
 
   generatePseudoMoves(turnColour: number): Uint32Array {
-    const moves = new Uint32Array(256);
-    let moveIdx = 0;
+    const regularMoves = new Uint32Array(256);  // track normal moves
+    let regularMovesIdx = 0;
+    const captureMoves = new Uint32Array(256);  // track capture moves separate (to allow prioritisation in move ordering)
+    let captureMovesIdx = 0;
 
     const ply = this.chessboard.ply;
     const state = this.chessboard.state[ply];
@@ -199,7 +201,7 @@ export default class Engine {
 
           if (toSquare === SQUARE.EMPTY) {
             // empty square means piece can move here (pawn single push handled different - calculated all pawn moves separately later)
-            moves[moveIdx++] = (fromHasMoved) | (toBoardIndex << 8) | (fromBoardIndex);
+            regularMoves[regularMovesIdx++] = (fromHasMoved) | (toBoardIndex << 8) | (fromBoardIndex);
           }
           else if (toSquare === SQUARE.EDGE) {
             // if edge of board, stop search in this direction
@@ -211,7 +213,7 @@ export default class Engine {
           }
           else if (toColour !== fromColour) {
             // if opponent piece, capture and stop search in this direction
-            moves[moveIdx++] = (fromHasMoved) | (toSquare << 16) | (toBoardIndex << 8) | (fromBoardIndex);
+            captureMoves[captureMovesIdx++] = (fromHasMoved) | (toSquare << 16) | (toBoardIndex << 8) | (fromBoardIndex);
             break;
           }
           
@@ -235,19 +237,19 @@ export default class Engine {
         if (this.chessboard.board[singlePushIndex] === SQUARE.EMPTY) {
           if (singlePushIndex >= 31 && singlePushIndex <= 88) {
             // regular single push
-            moves[moveIdx++] = (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
+            regularMoves[regularMovesIdx++] = (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
           }
           else {
             // single push with promotion
             for (let j = 0; j < PROMOTION_PIECES.length; j++) {
               const promotionPiece = PROMOTION_PIECES[j];
-              moves[moveIdx++] = (promotionPiece << 25) | (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
+              regularMoves[regularMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
             }
           }
 
           if (!fromHasMoved && this.chessboard.board[doublePushIndex] === SQUARE.EMPTY) {
             // double push
-            moves[moveIdx++] = (ENCODED_MOVE.DOUBLE_PUSH_MOVE) | (fromHasMoved) | (doublePushIndex << 8) | (fromBoardIndex);
+            regularMoves[regularMovesIdx++] = (ENCODED_MOVE.DOUBLE_PUSH_MOVE) | (fromHasMoved) | (doublePushIndex << 8) | (fromBoardIndex);
           }
         }
 
@@ -268,19 +270,19 @@ export default class Engine {
         if (eastPiece && eastColour !== fromColour) {
           if (eastDiagonalIndex >= 31 && eastDiagonalIndex <= 88) {
             // east diagonal piece capture
-            moves[moveIdx++] = (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
+            captureMoves[captureMovesIdx++] = (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
           }
           else {
             // east diagonal piece capture with promotion
             for (let j = 0; j < PROMOTION_PIECES.length; j++) {
               const promotionPiece = PROMOTION_PIECES[j];
-              moves[moveIdx++] = (promotionPiece << 25) | (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
+              captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
         }
         else if (eastDiagonalIndex === enPassantTarget && enPassantSquare) {
           // en passant capture
-          moves[moveIdx++] = (ENCODED_MOVE.EN_PASSANT_MOVE) | (fromHasMoved) | (enPassantSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
+          captureMoves[captureMovesIdx++] = (ENCODED_MOVE.EN_PASSANT_MOVE) | (fromHasMoved) | (enPassantSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
         }
 
         const westSquare = this.chessboard.board[westDiagonalIndex];
@@ -290,19 +292,19 @@ export default class Engine {
         if (westPiece && westColour !== fromColour) {
           if (westDiagonalIndex >= 31 && westDiagonalIndex <= 88) {
             // west diagonal piece capture
-            moves[moveIdx++] = (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
+            captureMoves[captureMovesIdx++] = (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
           }
           else {
             // west diagonal piece capture with promotion
             for (let j = 0; j < PROMOTION_PIECES.length; j++) {
               const promotionPiece = PROMOTION_PIECES[j];
-              moves[moveIdx++] = (promotionPiece << 25) | (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
+              captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
         }
         else if (westDiagonalIndex === enPassantTarget && enPassantSquare) {
           // en passant capture
-          moves[moveIdx++] = (ENCODED_MOVE.EN_PASSANT_MOVE) | (fromHasMoved) | (enPassantSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
+          captureMoves[captureMovesIdx++] = (ENCODED_MOVE.EN_PASSANT_MOVE) | (fromHasMoved) | (enPassantSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
         }
       }
 
@@ -319,7 +321,7 @@ export default class Engine {
               }
             }
             if (gapEmpty === true) {
-              moves[moveIdx++] = (ENCODED_MOVE.KINGSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_KINGSIDE) << 8) | (fromBoardIndex);
+              regularMoves[regularMovesIdx++] = (ENCODED_MOVE.KINGSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_KINGSIDE) << 8) | (fromBoardIndex);
             }
           }
           if (state & BOARD_STATES.WHITE_QUEENSIDE_CASTLE) {
@@ -332,7 +334,7 @@ export default class Engine {
               }
             }
             if (gapEmpty === true) {
-              moves[moveIdx++] = (ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_QUEENSIDE) << 8) | (fromBoardIndex);
+              regularMoves[regularMovesIdx++] = (ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_QUEENSIDE) << 8) | (fromBoardIndex);
             }
           }
         }
@@ -347,7 +349,7 @@ export default class Engine {
               }
             }
             if (gapEmpty === true) {
-              moves[moveIdx++] = (ENCODED_MOVE.KINGSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_KINGSIDE) << 8) | (fromBoardIndex);
+              regularMoves[regularMovesIdx++] = (ENCODED_MOVE.KINGSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_KINGSIDE) << 8) | (fromBoardIndex);
             }
           }
           if (state & BOARD_STATES.BLACK_QUEENSIDE_CASTLE) {
@@ -360,14 +362,18 @@ export default class Engine {
               }
             }
             if (gapEmpty === true) {
-              moves[moveIdx++] = (ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_QUEENSIDE) << 8) | (fromBoardIndex);
+              regularMoves[regularMovesIdx++] = (ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE) | (fromHasMoved) | ((fromBoardIndex + CASTLE_INDEXES.KING_TO_QUEENSIDE) << 8) | (fromBoardIndex);
             }
           }
         }
       }
     }
 
-    return moves.subarray(0, moveIdx);
+    // efficiently combine all moves into single array, with capture moves being ordered first
+    const combinedMoves = new Uint32Array(regularMovesIdx + captureMovesIdx);
+    combinedMoves.set(captureMoves.subarray(0, captureMovesIdx), 0);
+    combinedMoves.set(regularMoves.subarray(0, regularMovesIdx), captureMovesIdx);
+    return combinedMoves;
   }
   
   generateLegalMoves(turnColour: number): Uint32Array {

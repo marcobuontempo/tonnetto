@@ -16,4 +16,4 @@ console.log(perft, time);
 // }
 
 
-// PERFT5: 1780 (outlier 2300)
+// PERFT5: 1650 (outlier 2300)
