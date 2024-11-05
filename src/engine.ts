@@ -1,19 +1,37 @@
 import ChessBoard from "./chessboard";
-import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, PROMOTION_PIECES, SLIDERS, SQUARE, SQUARE_ASCII, TURN, PIECE_SQUARE_TABLE, FLIP } from "./constants";
+import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, SLIDERS, SQUARE, SQUARE_ASCII, TURN, MG_PIECE_SQUARE_TABLE, FLIP, MG_PIECE_VALUES, EG_PIECE_SQUARE_TABLE, EG_PIECE_VALUES, GAME_PHASE } from "./constants";
 
 export default class Engine {
   public chessboard: ChessBoard;
-  public moveHistory = new Uint32Array(3600);    // stores the move history - 3600 is maximum theoretical moves
-  public kingPositions = new Uint8Array([SQUARE.EMPTY, SQUARE.EMPTY]);    // cache for [white, black] kig positions for quick lookup
+  public moveHistory = new Uint32Array(3600);                                    // stores the move history - 3600 is maximum theoretical moves
+  public kingPositions = new Uint8Array([SQUARE.EMPTY, SQUARE.EMPTY]);           // cache for [white, black] kig positions for quick lookup
+  private mgTablesWhite = Array.from({ length: 7 }, () => new Uint16Array(64));  // precomputed middle-game values table [piece][square]
+  private mgTablesBlack = Array.from({ length: 7 }, () => new Uint16Array(64));
+  private egTablesWhite = Array.from({ length: 7 }, () => new Uint16Array(64));  // precomputed end-game values table
+  private egTablesBlack = Array.from({ length: 7 }, () => new Uint16Array(64));
 
   constructor(fen?: string) {
     this.chessboard = new ChessBoard(fen);
     this.updateKingPositionCache();
+    this.initPestoTables();
+  }
+
+  initPestoTables() {
+    for (let pc = PIECE.PAWN; pc <= PIECE.KING; pc++) {
+      for (let sq = 0; sq < 64; sq++) {
+        // white tables
+        this.mgTablesWhite[pc][sq] = MG_PIECE_VALUES[pc] + MG_PIECE_SQUARE_TABLE[pc][sq];
+        this.egTablesWhite[pc][sq] = EG_PIECE_VALUES[pc] + EG_PIECE_SQUARE_TABLE[pc][sq];
+        // black tables
+        this.mgTablesBlack[pc][sq] = MG_PIECE_VALUES[pc] + MG_PIECE_SQUARE_TABLE[pc][FLIP[sq]];
+        this.egTablesBlack[pc][sq] = EG_PIECE_VALUES[pc] + EG_PIECE_SQUARE_TABLE[pc][FLIP[sq]];
+      }
+    }
   }
 
   updateKingPositionCache() {
-    for (let i = 0; i < 64; i++) {
-      const boardIndex = MAILBOX64[i];
+    for (let sq = 0; sq < 64; sq++) {
+      const boardIndex = MAILBOX64[sq];
       const square = this.chessboard.board[boardIndex];
       const piece = square & PIECE_MASK.TYPE;
       const colour = square & PIECE_MASK.COLOUR;
@@ -30,10 +48,10 @@ export default class Engine {
     const cacheIndex = (kingColour === PIECE.IS_WHITE) ? 0 : 1;
     const kingPosition = this.kingPositions[cacheIndex];
 
-    // check for any attacking sliders
+    // check for any attacking sliders (straight and diagonal)
     const straightMoves = MOVE_LIST[PIECE.ROOK];
-    for (let i = 0; i < straightMoves.length; i++) {
-      const direction = straightMoves[i];
+    for (let m = 0; m < straightMoves.length; m++) {
+      const direction = straightMoves[m];
       let currentPosition = kingPosition;
       while (true) {
         currentPosition += direction;
@@ -49,10 +67,9 @@ export default class Engine {
         break;  // piece is protected from sliders by a non-slider opponent piece
       }
     }
-
     const diagonalMoves = MOVE_LIST[PIECE.BISHOP];
-    for (let i = 0; i < diagonalMoves.length; i++) {
-      const direction = diagonalMoves[i];
+    for (let m = 0; m < diagonalMoves.length; m++) {
+      const direction = diagonalMoves[m];
       let currentPosition = kingPosition;
       while (true) {
         currentPosition += direction;
@@ -71,13 +88,21 @@ export default class Engine {
 
     // check for attacking knights
     const knightMoves = MOVE_LIST[PIECE.KNIGHT];
-    for (let i = 0; i < knightMoves.length; i++) {
-      const direction = knightMoves[i];
+    for (let m = 0; m < knightMoves.length; m++) {
+      const direction = knightMoves[m];
       const currentSquare = this.chessboard.board[kingPosition + direction];
       const currentPiece = currentSquare & PIECE_MASK.TYPE;
       const currentColour = currentSquare & PIECE_MASK.COLOUR;
       if (currentColour === kingColour) continue;
       if (currentPiece === PIECE.KNIGHT) return true;  // under attack by knight
+    }
+    
+    // check for opponent king
+    const kingMoves = MOVE_LIST[PIECE.KING];
+    for (let m = 0; m < kingMoves.length; m++) {
+      const direction = kingMoves[m];
+      const piece = (this.chessboard.board[kingPosition + direction]) & PIECE_MASK.TYPE;
+      if (piece === PIECE.KING) return true;  // under attack by another king
     }
 
     // check for diagonal pawn moves
@@ -151,14 +176,14 @@ export default class Engine {
     const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8);
     const pieceCapture = SQUARE_ASCII[((move & ENCODED_MOVE.PIECE_CAPTURE) >> 16) & (PIECE_MASK.TYPE | PIECE_MASK.COLOUR)];
     const pieceHasMoved = !!(move & ENCODED_MOVE.PIECE_FROM_HAS_MOVED);
-    const promotionTo = SQUARE_ASCII[(move & ENCODED_MOVE.PROMOTION_TO) >> 25];
+    const promotionTo = SQUARE_ASCII[((move & ENCODED_MOVE.PROMOTION_TO) >> 25) | PIECE.IS_BLACK];  // IS_BLACK just to get lowercase ascii
     const enPassant = !!(move & ENCODED_MOVE.EN_PASSANT_MOVE);
     const doublePush = !!(move & ENCODED_MOVE.DOUBLE_PUSH_MOVE);
     const kingsideCastle = !!(move & ENCODED_MOVE.KINGSIDE_CASTLE_MOVE);
     const queensideCastle = !!(move & ENCODED_MOVE.QUEENSIDE_CASTLE_MOVE);
 
     return (
-      `${from}->${to}${pieceCapture!=='.' ? ' captured:'+pieceCapture : ''}${pieceHasMoved ? ' moved' : ''}${promotionTo!=='.' ? ' promote:'+promotionTo : ''}${enPassant ? ' en-passant' : ''}${doublePush ? ' double-push' : ''}${kingsideCastle ? ' ks-castle' : ''}${queensideCastle ? ' qs-castle' : ''}`
+      `${from}->${to}${pieceCapture!=='.' ? ' captured:'+pieceCapture : ''}${pieceHasMoved ? ' moved' : ''}${promotionTo ? ' promote:'+promotionTo : ''}${enPassant ? ' en-passant' : ''}${doublePush ? ' double-push' : ''}${kingsideCastle ? ' ks-castle' : ''}${queensideCastle ? ' qs-castle' : ''}`
     );
   }
 
@@ -171,8 +196,8 @@ export default class Engine {
     const ply = this.chessboard.ply;
     const state = this.chessboard.state[ply];
 
-    for (let i = 0; i < 64; i++) {
-      const fromBoardIndex = MAILBOX64[i];
+    for (let sq = 0; sq < 64; sq++) {
+      const fromBoardIndex = MAILBOX64[sq];
       const fromSquare = this.chessboard.board[fromBoardIndex];
       const fromPiece = fromSquare & PIECE_MASK.TYPE;
       const fromColour = fromSquare & PIECE_MASK.COLOUR;
@@ -187,8 +212,8 @@ export default class Engine {
       const directions = MOVE_LIST[pieceMovesIndex];
       const slider = SLIDERS[pieceMovesIndex];
  
-      for (let j = 0; j < directions.length; j++) {
-        const direction = directions[j];
+      for (let d = 0; d < directions.length; d++) {
+        const direction = directions[d];
         let toBoardIndex = fromBoardIndex;  // initialise from the current square, and we will add directions to it next during generation
 
         while (true) {
@@ -241,8 +266,7 @@ export default class Engine {
           }
           else {
             // single push with promotion
-            for (let j = 0; j < PROMOTION_PIECES.length; j++) {
-              const promotionPiece = PROMOTION_PIECES[j];
+            for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
               regularMoves[regularMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
             }
           }
@@ -274,8 +298,7 @@ export default class Engine {
           }
           else {
             // east diagonal piece capture with promotion
-            for (let j = 0; j < PROMOTION_PIECES.length; j++) {
-              const promotionPiece = PROMOTION_PIECES[j];
+            for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
               captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
@@ -296,8 +319,7 @@ export default class Engine {
           }
           else {
             // west diagonal piece capture with promotion
-            for (let j = 0; j < PROMOTION_PIECES.length; j++) {
-              const promotionPiece = PROMOTION_PIECES[j];
+            for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
               captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
@@ -382,8 +404,9 @@ export default class Engine {
 
     
     let moveIdx = 0;
-    for (let i = 0; i < pseudoMoves.length; i++) {
-      const pseudoMove = pseudoMoves[i];
+    for (let m = 0; m < pseudoMoves.length; m++) {
+      const pseudoMove = pseudoMoves[m];
+
       if (pseudoMove === 0) break;
       
       if (this.moveIsLegal(pseudoMove, turnColour)) {
@@ -424,7 +447,7 @@ export default class Engine {
     // promoted piece if required
     if (promotionPiece) {
       this.chessboard.board[toIndex] &= ~(PIECE_MASK.TYPE);    // remove piece type
-      this.chessboard.board[toIndex] |= promotionPiece;   // add promoted piece type
+      this.chessboard.board[toIndex] |= promotionPiece;        // add promoted piece type
     }
 
     // en passant - remove attacked pawn if so
@@ -590,7 +613,7 @@ export default class Engine {
         }
         this.chessboard.board[toIndex] = SQUARE.EMPTY;
       }
-      this.chessboard.board[restorePieceIndex] = capturedSquare;
+      this.chessboard.board[restorePieceIndex] = capturedSquare;  // restore piece on board
     }
     else {
       this.chessboard.board[toIndex] = SQUARE.EMPTY;
@@ -630,31 +653,45 @@ export default class Engine {
   }
 
   evaluate(turnColour: number) {
-    let score = 0;
+    // track the current evaluation score
+    const mg = new Int32Array([0, 0]);  // middle-game scores [WHITE, BLACK]
+    const eg = new Int32Array([0, 0]);  // end-game scores
 
-    for (let i = 0; i < 64; i++) {
-      const boardIndex = MAILBOX64[i];
+    // track game-phase (start, mid, endgame)
+    let gamePhase = 0;
+
+    for (let sq = 0; sq < 64; sq++) {
+      const boardIndex = MAILBOX64[sq];
       const square = this.chessboard.board[boardIndex];
 
       if (square === SQUARE.EMPTY) continue;  // skip empty squares for eval
       
       const piece = square & PIECE_MASK.TYPE;
       const colour = square & PIECE_MASK.COLOUR;
-      let psqtIdx = i;
-      let colourFactor = 1;
-      if (colour === PIECE.IS_BLACK) {
-        psqtIdx = FLIP[i];
-        colourFactor = -1;
+
+      if (colour === PIECE.IS_WHITE) {
+        mg[0] += this.mgTablesWhite[piece][sq];
+        eg[0] += this.egTablesWhite[piece][sq];
       }
-
-      score += (PIECE_SQUARE_TABLE[piece][psqtIdx] * colourFactor);
+      else if (colour === PIECE.IS_BLACK) {
+        mg[1] += this.mgTablesBlack[piece][sq];
+        eg[1] += this.egTablesBlack[piece][sq];
+      }
+      gamePhase += GAME_PHASE[piece];
     }
 
+    // tapered evaluation
+    let mgScore = mg[0] - mg[1];  // white - black
+    let egScore = eg[0] - eg[1];
     if (turnColour === PIECE.IS_BLACK) {
-      score *= -1;
+      mgScore *= -1;
+      egScore *= -1;
     }
 
-    return score;
+    const mgPhase = Math.min(gamePhase, 24);  // cap game phase at 24 (1 for each piece, but early promotion may skew result)
+    const egPhase = 24 - mgPhase;
+
+    return ((mgScore * mgPhase) + (egScore * egPhase)) / 24;  // normalise score, weighted by phase of the game
   }
 
   negamax(depth: number, turnColour: number, alpha = -Infinity, beta = Infinity) {
@@ -669,8 +706,8 @@ export default class Engine {
 
     const moves = this.generateLegalMoves(turnColour);
 
-    for (let i = 0; i < moves.length; i++) {
-      const move = moves[i];
+    for (let m = 0; m < moves.length; m++) {
+      const move = moves[m];
       this.makeMove(move);
       let { score } = this.negamax(depth - 1, opponentColour, -beta, -alpha);
       score *= -1;
@@ -703,8 +740,8 @@ export default class Engine {
     }
     else if (depth === 1) {
       if (outputIndividual && firstMove) {
-        for (let i = 0; i < legalMoves.length; i++) {
-          const move = legalMoves[i];
+        for (let m = 0; m < legalMoves.length; m++) {
+          const move = legalMoves[m];
           const from = this.chessboard.indexToAlgebraic(move & ENCODED_MOVE.FROM_INDEX).toLowerCase();
           const to = this.chessboard.indexToAlgebraic((move & ENCODED_MOVE.TO_INDEX) >> 8).toLowerCase();
           const promotion = SQUARE_ASCII[PIECE.IS_BLACK | ((move & ENCODED_MOVE.PROMOTION_TO) >> 25)] || '';
@@ -715,8 +752,8 @@ export default class Engine {
       return legalMoves.length;
     }
 
-    for (let i = 0; i < legalMoves.length; i++) {
-      const move = legalMoves[i];
+    for (let m = 0; m < legalMoves.length; m++) {
+      const move = legalMoves[m];
       let childnodes = 0;
       this.makeMove(move);
       childnodes += this.perft(depth - 1, false, false);
