@@ -1,5 +1,5 @@
 import ChessBoard from "./chessboard";
-import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, PROMOTION_PIECES, SLIDERS, SQUARE, SQUARE_ASCII, PIECE_EVAL_VALUES, TURN } from "./constants";
+import { BOARD_STATES, DIRECTION, ENCODED_MOVE, MAILBOX64, CASTLE_INDEXES, MOVE_LIST, PIECE, PIECE_MASK, PROMOTION_PIECES, SLIDERS, SQUARE, SQUARE_ASCII, TURN, PIECE_SQUARE_TABLE, FLIP } from "./constants";
 
 export default class Engine {
   public chessboard: ChessBoard;
@@ -631,6 +631,7 @@ export default class Engine {
 
   evaluate(turnColour: number) {
     let score = 0;
+
     for (let i = 0; i < 64; i++) {
       const boardIndex = MAILBOX64[i];
       const square = this.chessboard.board[boardIndex];
@@ -639,8 +640,14 @@ export default class Engine {
       
       const piece = square & PIECE_MASK.TYPE;
       const colour = square & PIECE_MASK.COLOUR;
+      let psqtIdx = i;
+      let colourFactor = 1;
+      if (colour === PIECE.IS_BLACK) {
+        psqtIdx = FLIP[i];
+        colourFactor = -1;
+      }
 
-      score += PIECE_EVAL_VALUES[(piece | colour)];
+      score += (PIECE_SQUARE_TABLE[piece][psqtIdx] * colourFactor);
     }
 
     if (turnColour === PIECE.IS_BLACK) {
