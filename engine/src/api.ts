@@ -32,6 +32,46 @@ export default class ChessEngineAPI {
     this.engine = new Engine(this.initialFEN);
   }
 
+  /* checks if current king is in check */
+  isKingInCheck() {
+    const currentTurn = ((this.engine.chessboard.state[this.engine.chessboard.ply]) & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK;
+    return this.engine.kingIsInCheck(currentTurn);
+  }
+
+  /* get the game state (breakdown of information from the FEN) */
+  getGameState() {
+    const [board, turn, castle, ep, halfmove, fullmove] = this.engine.chessboard.getFen();
+    return {
+      board,
+      turn,
+      castle,
+      ep,
+      halfmove: parseInt(halfmove),
+      fullmove: parseInt(halfmove),
+    }
+  }
+
+  /* (playing | 50 move | stalemate | checkmate) */
+  isGameOver() {
+    const moves = this.getBestMove(1);
+    const kingInCheck = this.isKingInCheck();
+    const { halfmove } = this.getGameState();
+
+    if (halfmove === 100) {
+      return '50-move';
+    }
+
+    if (moves === null) {
+      if (kingInCheck) {
+        return 'checkmate';
+      } else {
+        return 'stalemate';
+      }
+    }
+
+    return 'playing';
+  }
+
   /* apply a move to the board with algebraic notation. i.e. e2e4 */
   applyMove(move: string) {
     if (!/^[a-h][1-8][a-h][1-8]$/.test(move.toLowerCase())) return false;  // don't allow invalid algebraic input
@@ -59,13 +99,16 @@ export default class ChessEngineAPI {
     this.engine.unmakeMove(lastMove);
   }
 
-  /* validates a move */
-
   /* searches and returns the best move in the position, up to a specified depth */
   getBestMove(depth = 5) {
     const currentTurn = ((this.engine.chessboard.state[this.engine.chessboard.ply]) & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK;
     const { bestMove } = this.engine.negamax(depth, currentTurn);
-    return Engine.encodedMoveToAlgebraic(bestMove);
+    const move = Engine.encodedMoveToAlgebraic(bestMove);
+    if (/^[a-h][1-8][a-h][1-8]$/.test(move)) {
+      return move;
+    } else {
+      return null;
+    }
   }
 
   /* perft for a specific position and depth */

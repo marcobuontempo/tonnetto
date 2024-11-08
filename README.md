@@ -3,7 +3,7 @@
 IMPLEMENTED
 - typescript chess - tonnetto, inspired by stockfish
 - perft valid as per https://www.chessprogramming.org/Perft_Results
-- typed arrays for faster-operation
+- typed arrays for faster-operation. no bitboards due to caveats in js number type (32-bit is precise, 64-bit may lose precision with bitwise operations, BigInt cannot do all bitwise operations [?])
 - encoding using bits for pieces, moves, board state
 - negamax search
 - alpha-beta pruning for search optimisation
@@ -22,9 +22,14 @@ TODO Features:
 
 TODO tasks:
 - evaluation: if 50 move, eval = 0. and others, e.g. stalemate?
-- check isEndGame in negamax search
+- check isGameEnded in negamax search
 - reduce branching factor with better and faster pruning
-- refactor code to improve performance (generate moves, is move legal, evaluate position, search)
+- refactor code to improve performance (generate moves, is move legal, evaluate position, search, hardcode constants)
 - prettify/eslint
 - specify types for all method returns
 - add comments and annotations where necessary, JSDoc
+
+
+
+PIECE SETS:
+- Open Chess Font: Colin M.L. Burnett (https://github.com/joshwalters/open-chess-font)
