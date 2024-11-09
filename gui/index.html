@@ -7,24 +7,31 @@
   <link rel="stylesheet" href="./index.css" />
 </head>
 <body>
-  <h1>Tonnetto Chess</h1>
+  <h1>tonnetto chess</h1>
   <main>
     <div id="game" style="display: none;">
-      <div id="chessboard"></div>
+      <div class="chessboard-container">
+        <div id="chessboard"></div>
+        <div id="end-overlay" style="display: none;">
+          <p id="endgame-text"></p>
+          <button id="play-again-button" class="submit-button">Play Again?</button>
+        </div>
+      </div>
       <p id="thinking">ready!</p>
     </div>
     
-    <div id="game-over" style="display: none;"></div>
 
     <form id="settings">
       <fieldset class="form-group">
         <label class="settings-label">CHOOSE SIDE:</label>
-        <label class="form-input"><input type="radio" name="playerColour" value="w" checked> White</label>
-        <label class="form-input"><input type="radio" name="playerColour" value="b"> Black</label>
+        <div class="side-input-container">
+          <label class="form-input"><input type="radio" name="playerColour" value="w" checked> White</label>
+          <label class="form-input"><input type="radio" name="playerColour" value="b"> Black</label>
+        </div>
       </fieldset>
       <fieldset class="form-group">
         <label class="settings-label" for="difficulty">AI DIFFICULTY:</label>
-        <input type="range" id="difficulty" name="difficulty" min="1" max="5" value="3" oninput="document.getElementById('difficulty-value').innerText = this.value;">
+        <input type="range" id="difficulty" class="form-input" name="difficulty" min="1" max="5" value="3" oninput="document.getElementById('difficulty-value').innerText = this.value;">
         <div class="slider-value">Level: <span id="difficulty-value">3</span></div>
       </fieldset>
       <fieldset class="form-group">
@@ -34,13 +41,16 @@
       <fieldset class="form-group">
         <label class="settings-label" for="piece-set">PIECE SET:</label>
         <select id="piece-set" name="pieceSet" class="form-input">
-          <option value="open-chess-font">Classic Set</option>
+          <option value="open-chess-font">Classic</option>
+          <option value="horsey">Horsey</option>
         </select>
       </fieldset>
       <fieldset class="form-group">
         <label class="settings-label" for="board-theme">BOARD THEME:</label>
         <select id="board-theme" name="boardTheme" class="form-input">
-          <option value="dark">Dark</option>
+          <option value="classic">Classic</option>
+          <option value="light">Light</option>
+          <option value="neo">Neo</option>
         </select>
       </fieldset>
       <div class="button-container">

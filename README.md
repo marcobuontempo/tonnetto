@@ -11,18 +11,18 @@ IMPLEMENTED
 
 
 TODO Features:
-- UCI compliance
-- run as standalone engine in command-line, browser, or frontend
-- frontend GUI, connect to engine
+- UCI operability (mostly completed)
 - quiescence search (to stabilise position's and search)
 - MVV-LVA sorting
 - Null move pruning
 - opening book and/or endgame tablebases
+- run as standalone engine in command-line, browser, or frontend
 
 
-TODO tasks:
+TODO Engine:
 - evaluation: if 50 move, eval = 0. and others, e.g. stalemate?
-- check isGameEnded in negamax search
+- check isGameEnded in negamax search [?]
+- perft is decently fast. need to improve best move search
 - reduce branching factor with better and faster pruning
 - refactor code to improve performance (generate moves, is move legal, evaluate position, search, hardcode constants)
 - prettify/eslint
@@ -30,6 +30,12 @@ TODO tasks:
 - add comments and annotations where necessary, JSDoc
 
 
+TODO GUI:
+- highlight king in check
+- highlight last move
+- import using npm script tag
+
 
 PIECE SETS:
-- Open Chess Font: Colin M.L. Burnett (https://github.com/joshwalters/open-chess-font)
+- Open Chess Font: Colin M.L. Burnett (GPLv2+)
+- Horsey: cham, michael1241 (CC BY-NC-SA 4.0)

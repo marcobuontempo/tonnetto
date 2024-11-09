@@ -3,7 +3,9 @@ import { ChessEngineAPI } from '../engine/dist/engine.bundle.js'
 const chessWorker = new Worker('chessWorker.js', { type: 'module' });
 const gameElement = document.getElementById('game');
 const settingsElement = document.getElementById('settings');
-const gameOverElement = document.getElementById('game-over');
+const endOverlayElement = document.getElementById('end-overlay');
+const endTextElement = document.getElementById('endgame-text');
+const thinkingElement = document.getElementById('thinking');
 
 const state = {
   gameState: 'playing',                                               // the current game state (playing | 50-move | stalemate | checkmate) 
@@ -27,9 +29,11 @@ settingsElement.addEventListener('submit', (e) => {
   if (pieceSet) state.pieceSet = pieceSet;
   if (boardTheme) state.boardTheme = boardTheme;
 
+  // Start game
+
   settingsElement.style.display = 'none';
   gameElement.style.display = 'block';
-  renderBoard();
+  render();
 
   if (state.playerColour === 'b') makeComputerMove();
 })
@@ -76,6 +80,7 @@ const renderBoard = () => {
       } else {
         square.classList.add('black-square');
       }
+      square.classList.add(state.boardTheme);
 
       // set the coordinate as a data attribute (e.g., "a8", "b7")
       const coordinate = `${files[col]}${row}`;
@@ -103,27 +108,36 @@ const renderBoard = () => {
       });
     }
   }
+};
 
-  gameElement.style.display = 'none';  
-  gameOverElement.style.display = 'block';
+const renderOverlay = () => {
   switch (state.gameState) {
     case 'checkmate':
       const winner = getTurn() === 'w' ? 'BLACK': 'WHITE';
-      gameOverElement.innerHTML =  winner + 'WINS (checkmate)';
+      endTextElement.innerHTML =  `${winner} WINS (checkmate)`;
+      endOverlayElement.style.display = 'flex';
+      thinkingElement.style.display = 'none';
       break;
     case 'stalemate':
-      gameOverElement.innerHTML = 'DRAW (stalemate)';
+      endTextElement.innerHTML = 'DRAW (stalemate)';
+      endOverlayElement.style.display = 'flex';
+      thinkingElement.style.display = 'none';
       break;
     case '50-move':
-      gameOverElement.innerHTML = 'DRAW (50-move rule)';
+      endTextElement.innerHTML = 'DRAW (50-move rule)';
+      endOverlayElement.style.display = 'flex';
+      thinkingElement.style.display = 'none';
       break;
     case 'playing':
     default:
-      gameElement.style.display = 'block';
-      gameOverElement.style.display = 'none';
-      break;
+      endOverlayElement.style.display = 'none';
   }
-};
+}
+
+const render = () => {
+  renderBoard();
+  renderOverlay();
+}
 
 const handleSquareClick = (square) => {
   if (getTurn() !== state.playerColour) return; // only allow moves if player's current turn
@@ -157,6 +171,10 @@ const toggleSquareHighlight = (square) => {
   square.classList.toggle('selected-square');
 }
 
+const setThinkingState = (action) => {
+  thinkingElement.innerHTML = `Tonnetto Bot is ${action}`;
+}
+
 const isValidMove = (moveNotation) => {
   const engine = new ChessEngineAPI(state.fen);
   engine.applyMove(moveNotation);
@@ -179,11 +197,12 @@ const makeMove = (moveNotation) => {
 
   state.gameState = engine.isGameOver();
 
-  renderBoard();
+  render();
 }
 
 const makeComputerMove = () => {
   // send the board state to the worker for processing
+  setThinkingState('thinking...');
   const message = {
     fen: state.fen,
     depth: difficultyScale[state.difficulty],
@@ -197,5 +216,11 @@ const makeComputerMove = () => {
       // update the board with the best move
       makeMove(bestMove);
     }
+    setThinkingState('ready for your turn!');
   };
 }
+
+const resetGame = () => {
+  window.location.reload();
+}
+document.getElementById('play-again-button').addEventListener('click', resetGame);
