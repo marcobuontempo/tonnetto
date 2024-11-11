@@ -103,12 +103,7 @@ export default class ChessEngineAPI {
   getBestMove(depth = 5) {
     const currentTurn = ((this.engine.chessboard.state[this.engine.chessboard.ply]) & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK;
     const { bestMove } = this.engine.negamax(depth, currentTurn);
-    const move = Engine.encodedMoveToAlgebraic(bestMove);
-    if (/^[a-h][1-8][a-h][1-8]$/.test(move)) {
-      return move;
-    } else {
-      return null;
-    }
+    return bestMove ? Engine.encodedMoveToAlgebraic(bestMove) : bestMove;
   }
 
   /* perft for a specific position and depth */

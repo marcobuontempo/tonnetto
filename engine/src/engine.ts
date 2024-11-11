@@ -411,7 +411,6 @@ export default class Engine {
   generateLegalMoves(turnColour: number): Uint32Array {
     const pseudoMoves = this.generatePseudoMoves(turnColour);
     const legalMoves = new Uint32Array(pseudoMoves.length);
-
     
     let moveIdx = 0;
     for (let m = 0; m < pseudoMoves.length; m++) {
@@ -704,17 +703,29 @@ export default class Engine {
     return ((mgScore * mgPhase) + (egScore * egPhase)) / 24;  // normalise score, weighted by phase of the game
   }
 
-  negamax(depth: number, turnColour: number, alpha = -Infinity, beta = Infinity) {
+  negamax(depth: number, turnColour: number, alpha = -Infinity, beta = Infinity) {   
     if (depth === 0) {
-      return { score: this.evaluate(turnColour), bestMove: 0 };
+      return { score: this.evaluate(turnColour), bestMove: null };
+    }
+    
+    const moves = this.generateLegalMoves(turnColour);
+
+    if (moves.length === 0) {
+      if (this.kingIsInCheck(turnColour)) {
+        // checkmate. return a mate score adjusted for depth
+        const mateScore = -(EG_PIECE_VALUES[PIECE.KING] + depth);
+        return { score: mateScore, bestMove: null };
+      } else {
+        // stalemate
+        return { score: 0, bestMove: 0 };
+      }
     }
 
     const opponentColour = turnColour === TURN.WHITE ? TURN.BLACK : TURN.WHITE;
 
     let maxScore = -Infinity;
-    let bestMove = 0;
+    let bestMove = null;
 
-    const moves = this.generateLegalMoves(turnColour);
 
     for (let m = 0; m < moves.length; m++) {
       const move = moves[m];
@@ -792,9 +803,11 @@ export default class Engine {
     }
     
     if (outputIndividual) {
-      const nodesPerSecond = (nodes / ((performance.now() - startTime)/ 1000)).toFixed(2);
+      const seconds = (performance.now() - startTime)/ 1000;
+      const nodesPerSecond = (nodes / seconds).toFixed(2);
       console.log(`\nNodes: ${nodes}`);
-      console.log(`Speed: ${nodesPerSecond} / sec`)
+      console.log(`\Time: ${seconds} secs`);
+      console.log(`Speed: ${nodesPerSecond} nodes / sec`)
     }
 
     return nodes;
