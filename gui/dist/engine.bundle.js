@@ -1076,12 +1076,23 @@ class Engine {
     }
     negamax(depth, turnColour, alpha = -Infinity, beta = Infinity) {
         if (depth === 0) {
-            return { score: this.evaluate(turnColour), bestMove: 0 };
+            return { score: this.evaluate(turnColour), bestMove: null };
+        }
+        const moves = this.generateLegalMoves(turnColour);
+        if (moves.length === 0) {
+            if (this.kingIsInCheck(turnColour)) {
+                // checkmate. return a mate score adjusted for depth
+                const mateScore = -(EG_PIECE_VALUES[PIECE.KING] + depth);
+                return { score: mateScore, bestMove: null };
+            }
+            else {
+                // stalemate
+                return { score: 0, bestMove: 0 };
+            }
         }
         const opponentColour = turnColour === TURN.WHITE ? TURN.BLACK : TURN.WHITE;
         let maxScore = -Infinity;
-        let bestMove = 0;
-        const moves = this.generateLegalMoves(turnColour);
+        let bestMove = null;
         for (let m = 0; m < moves.length; m++) {
             const move = moves[m];
             this.makeMove(move);
@@ -1149,9 +1160,11 @@ class Engine {
             }
         }
         if (outputIndividual) {
-            const nodesPerSecond = (nodes / ((performance.now() - startTime) / 1000)).toFixed(2);
+            const seconds = (performance.now() - startTime) / 1000;
+            const nodesPerSecond = (nodes / seconds).toFixed(2);
             console.log(`\nNodes: ${nodes}`);
-            console.log(`Speed: ${nodesPerSecond} / sec`);
+            console.log(`\Time: ${seconds} secs`);
+            console.log(`Speed: ${nodesPerSecond} nodes / sec`);
         }
         return nodes;
     }
@@ -1236,13 +1249,7 @@ class ChessEngineAPI {
     getBestMove(depth = 5) {
         const currentTurn = ((this.engine.chessboard.state[this.engine.chessboard.ply]) & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK;
         const { bestMove } = this.engine.negamax(depth, currentTurn);
-        const move = Engine.encodedMoveToAlgebraic(bestMove);
-        if (/^[a-h][1-8][a-h][1-8]$/.test(move)) {
-            return move;
-        }
-        else {
-            return null;
-        }
+        return bestMove ? Engine.encodedMoveToAlgebraic(bestMove) : bestMove;
     }
     /* perft for a specific position and depth */
     perft({ position = DEFAULT_FEN, depth = 5 } = {}) {
