@@ -721,9 +721,50 @@ export default class Engine {
     return ((mgScore * mgPhase) + (egScore * egPhase)) / 24;  // normalise score, weighted by phase of the game
   }
 
+  quiescenceSearch(turnColour: number, alpha = -Infinity, beta = Infinity) {
+    const standPat = this.evaluate(turnColour);
+
+    // alpha-beta pruning
+    if (standPat >= beta) {
+      return { score: beta, bestMove: null };  // beta cutoff
+    }
+    if (standPat > alpha) {
+      alpha = standPat;  // update alpha
+    }
+
+    const moves = this.generateLegalMoves(turnColour);
+
+    for (let m = 0; m < moves.length; m++) {
+      const move = moves[m];
+
+      // check if move if a capture move
+      if (!(move & ENCODED_MOVE.PIECE_CAPTURE)) {
+        break;  // if no more capture moves, stop search, as all capture moves are ordered first by generateLegalMoves
+      }
+
+      const opponentColour = turnColour === TURN.WHITE ? TURN.BLACK : TURN.WHITE;
+
+      this.makeMove(move);
+      let { score } = this.quiescenceSearch(opponentColour, -beta, -alpha);
+      score *= -1;
+      this.unmakeMove(move);
+
+      // alpha-beta pruning update
+      if (score > alpha) {
+        alpha = score;
+      }
+      // beta cutoff check
+      if (score >= beta) {
+        return { score: beta, bestMove: null };
+      }
+    }
+    
+    return { score: alpha, bestMove: null };
+  }
+
   negamax(depth: number, turnColour: number, alpha = -Infinity, beta = Infinity) {   
     if (depth === 0) {
-      return { score: this.evaluate(turnColour), bestMove: null };
+      return this.quiescenceSearch(turnColour, alpha, beta);
     }
     
     const moves = this.generateLegalMoves(turnColour);

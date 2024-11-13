@@ -176,13 +176,13 @@ const setThinkingState = (action) => {
 }
 
 const isValidMove = (moveNotation) => {
-  const engine = new ChessEngineAPI(state.fen);
+  const engine = new ChessEngineAPI({ fen: state.fen });
   engine.applyMove(moveNotation);
   return !(engine.getFen().split(' ')[0] === state.fen.split(' ')[0]);
 }
 
 const makeMove = (moveNotation) => {
-  const engine = new ChessEngineAPI(state.fen);
+  const engine = new ChessEngineAPI({ fen: state.fen });
   
   // perform the move
   engine.applyMove(moveNotation); // call the engine to make the move

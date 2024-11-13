@@ -8,14 +8,14 @@ IMPLEMENTED
 - negamax search
 - alpha-beta pruning for search optimisation
 - evaluation using PeSTO's method https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
+- MVV-LVA sorting
+- quiescence search (to stabilise position's and search)
 
 
 TODO Features:
-- UCI operability (mostly completed)
-- quiescence search (to stabilise position's and search)
-- MVV-LVA sorting
 - Null move pruning
-- opening book and/or endgame tablebases
+- opening book and/or endgame tablebases (?)
+- UCI operability (mostly completed)
 - run as standalone engine in command-line, browser, or frontend
 
 

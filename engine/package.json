@@ -1,7 +1,7 @@
 {
-  "name": "chess-ts",
+  "name": "tonnetto-chess-ts",
   "version": "1.0.0",
-  "description": "UCI chess engine",
+  "description": "TypeScript chess engine",
   "main": "index.js",
   "type": "module",
   "scripts": {

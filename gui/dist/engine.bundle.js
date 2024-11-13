@@ -454,9 +454,11 @@ class Engine {
         this.mgTablesBlack = Array.from({ length: 7 }, () => new Uint16Array(64));
         this.egTablesWhite = Array.from({ length: 7 }, () => new Uint16Array(64)); // precomputed end-game values table
         this.egTablesBlack = Array.from({ length: 7 }, () => new Uint16Array(64));
+        this.mvvLvaTables = Array.from({ length: 7 }, () => new Uint16Array(6)); // precomputed mvv-lva tables
         this.chessboard = new ChessBoard(fen);
         this.updateKingPositionCache();
         this.initPestoTables();
+        this.initMvvLvaTables();
     }
     initPestoTables() {
         for (let pc = PIECE.PAWN; pc <= PIECE.KING; pc++) {
@@ -467,6 +469,15 @@ class Engine {
                 // black tables
                 this.mgTablesBlack[pc][sq] = MG_PIECE_VALUES[pc] + MG_PIECE_SQUARE_TABLE[pc][FLIP[sq]];
                 this.egTablesBlack[pc][sq] = EG_PIECE_VALUES[pc] + EG_PIECE_SQUARE_TABLE[pc][FLIP[sq]];
+            }
+        }
+    }
+    initMvvLvaTables() {
+        for (let pcA = PIECE.PAWN; pcA <= PIECE.KING; pcA++) {
+            for (let pcV = PIECE.PAWN; pcV <= PIECE.KING; pcV++) {
+                const attackerValue = MG_PIECE_VALUES[pcA];
+                const victimValue = MG_PIECE_VALUES[pcV];
+                this.mvvLvaTables[pcA][pcV] = (victimValue * 10) - attackerValue;
             }
         }
     }
@@ -626,6 +637,11 @@ class Engine {
         const from = ChessBoard.algebraicToIndex(move.substring(0, 2));
         const to = ChessBoard.algebraicToIndex(move.substring(2, 4));
         return [from, to];
+    }
+    mvvLvaScore(move) {
+        const attacker = this.chessboard.board[(move & ENCODED_MOVE.FROM_INDEX)] & PIECE_MASK.TYPE;
+        const victim = ((move & ENCODED_MOVE.PIECE_CAPTURE) >> 16) & PIECE_MASK.TYPE;
+        return this.mvvLvaTables[attacker][victim];
     }
     generatePseudoMoves(turnColour) {
         const regularMoves = new Uint32Array(256); // track normal moves
@@ -812,7 +828,7 @@ class Engine {
         }
         // efficiently combine all moves into single array, with capture moves being ordered first
         const combinedMoves = new Uint32Array(regularMovesIdx + captureMovesIdx);
-        combinedMoves.set(captureMoves.subarray(0, captureMovesIdx), 0);
+        combinedMoves.set(captureMoves.subarray(0, captureMovesIdx).sort((moveA, moveB) => this.mvvLvaScore(moveB) - this.mvvLvaScore(moveA)), 0); // MVV-LVA sort before combining
         combinedMoves.set(regularMoves.subarray(0, regularMovesIdx), captureMovesIdx);
         return combinedMoves;
     }
@@ -1171,9 +1187,12 @@ class Engine {
 }
 
 class ChessEngineAPI {
-    constructor(fen) {
-        this.engine = new Engine(fen);
+    constructor(options = {}) {
+        const { fen, debug } = options;
+        this.engine = new Engine(fen || DEFAULT_FEN);
         this.initialFEN = fen || DEFAULT_FEN;
+        this.debug = debug !== null && debug !== void 0 ? debug : false;
+        this.start = 0;
     }
     /* sets the board state according to new FEN input. removes existing engine state */
     setFen(fen) {
@@ -1247,8 +1266,14 @@ class ChessEngineAPI {
     }
     /* searches and returns the best move in the position, up to a specified depth */
     getBestMove(depth = 5) {
+        if (this.debug) {
+            this.start = performance.now();
+        }
         const currentTurn = ((this.engine.chessboard.state[this.engine.chessboard.ply]) & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK;
         const { bestMove } = this.engine.negamax(depth, currentTurn);
+        if (this.debug) {
+            console.log(`${(performance.now() - this.start) / 1000} seconds`);
+        }
         return bestMove ? Engine.encodedMoveToAlgebraic(bestMove) : bestMove;
     }
     /* perft for a specific position and depth */
@@ -1587,4 +1612,3 @@ UCIInterface.NAME = 'Tonnetto';
 UCIInterface.AUTHOR = 'Marco Buontempo';
 
 export { ChessBoard, ChessEngineAPI, Engine, TURN, UCIInterface };
-//# sourceMappingURL=engine.bundle.js.map
