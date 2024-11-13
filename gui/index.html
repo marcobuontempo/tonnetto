@@ -12,6 +12,19 @@
     <div id="game" style="display: none;">
       <div class="chessboard-container">
         <div id="chessboard"></div>
+        <form id="promotion-select-form">
+          <div class="promotion-container">
+            <p>Select a piece to promote to:</p>
+            <select id="promotion-select" class="form-input">
+              <option value="q">Queen</option>
+              <option value="r">Rook</option>
+              <option value="b">Bishop</option>
+              <option value="n">Knight</option>
+            </select>
+            <button id="promotion-confirm" class="submit-button">Confirm</button>
+            <button id="promotion-cancel" class="submit-button">Cancel</button>
+          </div>
+        </form>
         <div id="end-overlay" style="display: none;">
           <p id="endgame-text"></p>
           <button id="play-again-button" class="submit-button">Play Again?</button>
@@ -31,8 +44,8 @@
       </fieldset>
       <fieldset class="form-group">
         <label class="settings-label" for="difficulty">AI DIFFICULTY:</label>
-        <input type="range" id="difficulty" class="form-input" name="difficulty" min="1" max="5" value="3" oninput="document.getElementById('difficulty-value').innerText = this.value;">
-        <div class="slider-value">Level: <span id="difficulty-value">3</span></div>
+        <input type="range" id="difficulty" class="form-input" name="difficulty" min="1" max="7" value="4" oninput="document.getElementById('difficulty-value').innerText = this.value;">
+        <div class="slider-value">Level: <span id="difficulty-value">4</span></div>
       </fieldset>
       <fieldset class="form-group">
         <label class="settings-label" for="fen">STARTING FEN:</label>

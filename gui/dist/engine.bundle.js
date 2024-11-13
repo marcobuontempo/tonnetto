@@ -1135,7 +1135,7 @@ class Engine {
             }
             else {
                 // stalemate
-                return { score: 0, bestMove: 0 };
+                return { score: 0, bestMove: null };
             }
         }
         const opponentColour = turnColour === TURN.WHITE ? TURN.BLACK : TURN.WHITE;
@@ -1276,15 +1276,17 @@ class ChessEngineAPI {
     }
     /* apply a move to the board with algebraic notation. i.e. e2e4 */
     applyMove(move) {
-        if (!/^[a-h][1-8][a-h][1-8]$/.test(move.toLowerCase()))
+        if (!/^[a-h][1-8][a-h][1-8][bnrq]?$/.test(move.toLowerCase()))
             return false; // don't allow invalid algebraic input
         const [from, to] = Engine.algebraicMoveToIndexes(move);
+        const promotion = move.substring(4, 5).toUpperCase();
         const turnColour = this.engine.chessboard.board[from] & PIECE_MASK.COLOUR;
         if (turnColour !== TURN.WHITE && turnColour !== TURN.BLACK)
             return false; // ensure square to move actually contains a piece
         const legalMoves = this.engine.generateLegalMoves(turnColour); // find the encoded move information
         const legalMove = legalMoves.find(legalMove => (legalMove & ENCODED_MOVE.FROM_INDEX) === from &&
-            ((legalMove & ENCODED_MOVE.TO_INDEX) >> 8) === to);
+            ((legalMove & ENCODED_MOVE.TO_INDEX) >> 8) === to &&
+            (((legalMove & ENCODED_MOVE.PROMOTION_TO) >> 25) === (PIECE_LOOKUP[promotion] || 0)));
         if (!legalMove)
             return false; // if no move found, then it isn't legal or existing
         this.engine.makeMove(legalMove); // finally, make the move on the board
@@ -1309,7 +1311,7 @@ class ChessEngineAPI {
         if (bestMove) {
             const algebraic = Engine.encodedMoveToAlgebraic(bestMove);
             const promotion = SQUARE_ASCII[((bestMove & ENCODED_MOVE.PROMOTION_TO) >> 25) | PIECE.IS_BLACK];
-            return promotion === '.' ? algebraic : `${algebraic}${promotion}`;
+            return `${algebraic}${promotion || ''}`;
         }
         return null;
     }
@@ -1647,12 +1649,6 @@ class UCIInterface {
 }
 UCIInterface.NAME = 'Tonnetto';
 UCIInterface.AUTHOR = 'Marco Buontempo';
-
-const fen = '8/8/8/p7/P6p/K1n4P/1pk5/8 b - - 3 57';
-const engine = new ChessEngineAPI({ fen, debug: true });
-const move = engine.getBestMove(1);
-console.log(move);
-// depth = 7: 3.4 seconds
 
 export { ChessBoard, ChessEngineAPI, Engine, TURN, UCIInterface };
 //# sourceMappingURL=engine.bundle.js.map

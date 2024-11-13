@@ -776,7 +776,7 @@ export default class Engine {
         return { score: mateScore, bestMove: null };
       } else {
         // stalemate
-        return { score: 0, bestMove: 0 };
+        return { score: 0, bestMove: null };
       }
     }
 

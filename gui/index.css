@@ -229,6 +229,30 @@ input[type="range"].form-input::-webkit-slider-thumb {
   position: absolute;
 }
 
+#promotion-select-form {
+  position: absolute;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  top: 0;
+}
+
+.promotion-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1em;
+  background: var(--colour-5);
+  box-shadow: 8px 8px 0px var(--colour-4);
+  border: 2px solid black;
+  padding: 2em;
+  border-radius: var(--radius);
+}
+
 /* Classic theme */
 .chess-square.classic {
   border: 1px solid #333;

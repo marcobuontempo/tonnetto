@@ -1,4 +1,4 @@
-import { BOARD_STATES, DEFAULT_FEN, ENCODED_MOVE, PIECE, PIECE_MASK, SQUARE_ASCII, TURN } from './constants';
+import { BOARD_STATES, DEFAULT_FEN, ENCODED_MOVE, PIECE, PIECE_LOOKUP, PIECE_MASK, SQUARE_ASCII, TURN } from './constants';
 import Engine from './engine';
 
 declare global {
@@ -84,9 +84,10 @@ export default class ChessEngineAPI {
 
   /* apply a move to the board with algebraic notation. i.e. e2e4 */
   applyMove(move: string) {
-    if (!/^[a-h][1-8][a-h][1-8]$/.test(move.toLowerCase())) return false;  // don't allow invalid algebraic input
+    if (!/^[a-h][1-8][a-h][1-8][bnrq]?$/.test(move.toLowerCase())) return false;  // don't allow invalid algebraic input
 
     const [from, to] = Engine.algebraicMoveToIndexes(move);
+    const promotion = move.substring(4,5).toUpperCase();
 
     const turnColour = this.engine.chessboard.board[from] & PIECE_MASK.COLOUR;
     if (turnColour !== TURN.WHITE && turnColour !== TURN.BLACK) return false;  // ensure square to move actually contains a piece
@@ -94,7 +95,8 @@ export default class ChessEngineAPI {
     const legalMoves = this.engine.generateLegalMoves(turnColour);  // find the encoded move information
     const legalMove = legalMoves.find(legalMove => 
       (legalMove & ENCODED_MOVE.FROM_INDEX) === from && 
-      ((legalMove & ENCODED_MOVE.TO_INDEX) >> 8) === to
+      ((legalMove & ENCODED_MOVE.TO_INDEX) >> 8) === to &&
+      (((legalMove & ENCODED_MOVE.PROMOTION_TO) >> 25) === (PIECE_LOOKUP[promotion] || 0))
     );
 
     if (!legalMove) return false;  // if no move found, then it isn't legal or existing
@@ -124,7 +126,7 @@ export default class ChessEngineAPI {
     if (bestMove) {
       const algebraic = Engine.encodedMoveToAlgebraic(bestMove);
       const promotion = SQUARE_ASCII[((bestMove & ENCODED_MOVE.PROMOTION_TO) >> 25) | PIECE.IS_BLACK];
-      return promotion === '.' ? algebraic : `${algebraic}${promotion}`;
+      return `${algebraic}${promotion || ''}`;
     }
     return null;
   }

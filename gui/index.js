@@ -35,15 +35,18 @@ settingsElement.addEventListener('submit', (e) => {
   gameElement.style.display = 'block';
   render();
 
-  if (state.playerColour === 'b') makeComputerMove();
+  const currentTurn = fen.split(' ')[1];
+  if (state.playerColour !== currentTurn) makeComputerMove();
 })
 
 const difficultyScale = {
-  1: 2,
-  2: 4,
-  3: 5,
-  4: 7,
-  5: 10,
+  1: 1,
+  2: 2,
+  3: 4,
+  4: 5,
+  5: 7,
+  6: 8,
+  7: 10,
 }
 
 const getTurn = () => {
@@ -98,6 +101,7 @@ const renderBoard = () => {
         if (state.playerColour === 'b') piece.classList.add('flip');
         piece.src = `./chess-pieces/${state.pieceSet}/${pieceColour}${pieceChar.toUpperCase()}.svg`;
         piece.setAttribute('data-piece-colour', pieceColour);
+        piece.setAttribute('data-piece-type', pieceChar);
         square.appendChild(piece);
       }
 
@@ -139,7 +143,7 @@ const render = () => {
   renderOverlay();
 }
 
-const handleSquareClick = (square) => {
+const handleSquareClick = async (square) => {
   if (getTurn() !== state.playerColour) return; // only allow moves if player's current turn
 
   const existingCoordinate = state.selectedSquare?.getAttribute('data-coordinate');
@@ -150,7 +154,20 @@ const handleSquareClick = (square) => {
     toggleSquareHighlight(square);
     state.selectedSquare = square;
   } else if (state.selectedSquare) {
-    const move = `${existingCoordinate}${clickedCoordinate}`;
+    let move = `${existingCoordinate}${clickedCoordinate}`;
+    const movedPieceType = state.selectedSquare.children[0].getAttribute('data-piece-type');
+    const rankTo = parseInt(clickedCoordinate[1]);
+    if ((movedPieceType === 'P' && rankTo === 8) || (movedPieceType === 'p' && rankTo === 1)) {
+      const promotionPiece = await selectPromotionPiece();
+      if (!promotionPiece) {
+        toggleSquareHighlight(square);
+        toggleSquareHighlight(state.selectedSquare);
+        state.selectedSquare = null;
+        return;
+      } else {
+        move += promotionPiece;
+      }
+    }
     if (isValidMove(move)) {
       makeMove(move);
       makeComputerMove();
@@ -166,6 +183,29 @@ const handleSquareClick = (square) => {
     }
   }
 };
+
+const selectPromotionPiece = () => {
+  return new Promise((resolve, reject) => {
+    const promotionFormElement = document.getElementById('promotion-select-form');
+    const promotionSelectElement = document.getElementById('promotion-select');
+    const confirmPromotion = document.getElementById('promotion-confirm');
+    const cancelPromotion = document.getElementById('promotion-cancel');
+    
+    promotionFormElement.style.display = 'flex';
+
+    confirmPromotion.addEventListener('click', (e) => {
+      e.preventDefault();
+      promotionFormElement.style.display = 'none';
+      resolve(promotionSelectElement.value);
+    });
+
+    cancelPromotion.addEventListener('click', (e) => {
+      e.preventDefault();
+      promotionFormElement.style.display = 'none';
+      resolve(null);
+    });
+  });
+}
 
 const toggleSquareHighlight = (square) => {
   square.classList.toggle('selected-square');

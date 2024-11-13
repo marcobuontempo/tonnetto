@@ -33,6 +33,8 @@ TODO Engine:
 TODO GUI:
 - highlight king in check
 - highlight last move
+- allow user to choose promotion piece
+- allow computer to promote (current notation for promomtion is an additional letter, e.g. a7a8q)
 - import using npm script tag
 
 
