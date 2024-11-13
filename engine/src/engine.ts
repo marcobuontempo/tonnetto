@@ -294,7 +294,7 @@ export default class Engine {
           }
           else {
             // single push with promotion
-            for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
+            for (let promotionPiece = PIECE.QUEEN; promotionPiece >= PIECE.KNIGHT; promotionPiece--) {
               regularMoves[regularMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
             }
           }
@@ -326,7 +326,7 @@ export default class Engine {
           }
           else {
             // east diagonal piece capture with promotion
-            for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
+            for (let promotionPiece = PIECE.QUEEN; promotionPiece >= PIECE.KNIGHT; promotionPiece--) {
               captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
@@ -347,7 +347,7 @@ export default class Engine {
           }
           else {
             // west diagonal piece capture with promotion
-            for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
+            for (let promotionPiece = PIECE.QUEEN; promotionPiece >= PIECE.KNIGHT; promotionPiece--) {
               captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
             }
           }
