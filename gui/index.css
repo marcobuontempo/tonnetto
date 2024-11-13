@@ -167,12 +167,14 @@ input[type="range"].form-input::-webkit-slider-thumb {
   border-radius: var(--radius);
   border: 2px solid var(--colour-3);
   background: var(--colour-1);
-  margin-bottom: 16px;
-  margin-right: 16px;
+  margin: 16px;
 }
 
 #chessboard {
   border: 2px solid var(--colour-dark);
+  display: grid;
+  grid-template-columns: repeat(8, 50px);
+  grid-template-rows: repeat(8, 50px);
 }
 
 #thinking {
@@ -208,12 +210,6 @@ input[type="range"].form-input::-webkit-slider-thumb {
   background: var(--colour-3);
   color: var(--colour-5);
   border-radius: var(--radius);
-}
-
-#chessboard {
-  display: grid;
-  grid-template-columns: repeat(8, 50px);
-  grid-template-rows: repeat(8, 50px);
 }
 
 .flip {
