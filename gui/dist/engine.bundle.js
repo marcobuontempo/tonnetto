@@ -709,7 +709,7 @@ class Engine {
                     }
                     else {
                         // single push with promotion
-                        for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
+                        for (let promotionPiece = PIECE.QUEEN; promotionPiece >= PIECE.KNIGHT; promotionPiece--) {
                             regularMoves[regularMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (singlePushIndex << 8) | (fromBoardIndex);
                         }
                     }
@@ -737,7 +737,7 @@ class Engine {
                     }
                     else {
                         // east diagonal piece capture with promotion
-                        for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
+                        for (let promotionPiece = PIECE.QUEEN; promotionPiece >= PIECE.KNIGHT; promotionPiece--) {
                             captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (eastSquare << 16) | (eastDiagonalIndex << 8) | (fromBoardIndex);
                         }
                     }
@@ -756,7 +756,7 @@ class Engine {
                     }
                     else {
                         // west diagonal piece capture with promotion
-                        for (let promotionPiece = PIECE.KNIGHT; promotionPiece <= PIECE.QUEEN; promotionPiece++) {
+                        for (let promotionPiece = PIECE.QUEEN; promotionPiece >= PIECE.KNIGHT; promotionPiece--) {
                             captureMoves[captureMovesIdx++] = (promotionPiece << 25) | (fromHasMoved) | (westSquare << 16) | (westDiagonalIndex << 8) | (fromBoardIndex);
                         }
                     }
@@ -1306,7 +1306,12 @@ class ChessEngineAPI {
         if (this.debug) {
             console.log(`${(performance.now() - this.start) / 1000} seconds`);
         }
-        return bestMove ? Engine.encodedMoveToAlgebraic(bestMove) : bestMove;
+        if (bestMove) {
+            const algebraic = Engine.encodedMoveToAlgebraic(bestMove);
+            const promotion = SQUARE_ASCII[((bestMove & ENCODED_MOVE.PROMOTION_TO) >> 25) | PIECE.IS_BLACK];
+            return promotion === '.' ? algebraic : `${algebraic}${promotion}`;
+        }
+        return null;
     }
     /* perft for a specific position and depth */
     perft({ position = DEFAULT_FEN, depth = 5 } = {}) {
@@ -1642,6 +1647,12 @@ class UCIInterface {
 }
 UCIInterface.NAME = 'Tonnetto';
 UCIInterface.AUTHOR = 'Marco Buontempo';
+
+const fen = '8/8/8/p7/P6p/K1n4P/1pk5/8 b - - 3 57';
+const engine = new ChessEngineAPI({ fen, debug: true });
+const move = engine.getBestMove(1);
+console.log(move);
+// depth = 7: 3.4 seconds
 
 export { ChessBoard, ChessEngineAPI, Engine, TURN, UCIInterface };
 //# sourceMappingURL=engine.bundle.js.map

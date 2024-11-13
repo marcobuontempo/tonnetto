@@ -1,4 +1,4 @@
-import { BOARD_STATES, DEFAULT_FEN, ENCODED_MOVE, PIECE_MASK, TURN } from './constants';
+import { BOARD_STATES, DEFAULT_FEN, ENCODED_MOVE, PIECE, PIECE_MASK, SQUARE_ASCII, TURN } from './constants';
 import Engine from './engine';
 
 declare global {
@@ -121,7 +121,12 @@ export default class ChessEngineAPI {
       console.log(`${(performance.now() - this.start) / 1000} seconds`);
     }
 
-    return bestMove ? Engine.encodedMoveToAlgebraic(bestMove) : bestMove;
+    if (bestMove) {
+      const algebraic = Engine.encodedMoveToAlgebraic(bestMove);
+      const promotion = SQUARE_ASCII[((bestMove & ENCODED_MOVE.PROMOTION_TO) >> 25) | PIECE.IS_BLACK];
+      return promotion === '.' ? algebraic : `${algebraic}${promotion}`;
+    }
+    return null;
   }
 
   /* perft for a specific position and depth */
