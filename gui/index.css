@@ -80,7 +80,7 @@ h1 {
 
 .side-input-container {
   display: flex;
-  gap: 0.25em;
+  gap: 1em;
   width: 100%;
 }
 

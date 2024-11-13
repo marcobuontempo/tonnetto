@@ -7,13 +7,23 @@ declare global {
   }
 }
 
+interface ConstructorOptions {
+  fen?: string;
+  debug?: boolean;
+}
+
 export default class ChessEngineAPI {
   private initialFEN: string;
   private engine: Engine;
+  private debug: boolean;
+  private start: number;
 
-  constructor(fen?: string) {
-    this.engine = new Engine(fen);
+  constructor(options: ConstructorOptions = {}) {
+    const { fen, debug } = options;
+    this.engine = new Engine(fen || DEFAULT_FEN);
     this.initialFEN = fen || DEFAULT_FEN;
+    this.debug = debug ?? false;
+    this.start = 0;
   }
 
   /* sets the board state according to new FEN input. removes existing engine state */
@@ -101,8 +111,16 @@ export default class ChessEngineAPI {
 
   /* searches and returns the best move in the position, up to a specified depth */
   getBestMove(depth = 5) {
+    if (this.debug) {
+      this.start = performance.now();
+    }
     const currentTurn = ((this.engine.chessboard.state[this.engine.chessboard.ply]) & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK;
     const { bestMove } = this.engine.negamax(depth, currentTurn);
+
+    if (this.debug) {
+      console.log(`${(performance.now() - this.start) / 1000} seconds`);
+    }
+
     return bestMove ? Engine.encodedMoveToAlgebraic(bestMove) : bestMove;
   }
 

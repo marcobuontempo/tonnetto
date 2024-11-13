@@ -9,11 +9,13 @@ export default class Engine {
   private mgTablesBlack = Array.from({ length: 7 }, () => new Uint16Array(64));
   private egTablesWhite = Array.from({ length: 7 }, () => new Uint16Array(64));  // precomputed end-game values table
   private egTablesBlack = Array.from({ length: 7 }, () => new Uint16Array(64));
+  private mvvLvaTables = Array.from({ length: 7 }, () => new Uint16Array(6));     // precomputed mvv-lva tables
 
   constructor(fen?: string) {
     this.chessboard = new ChessBoard(fen);
     this.updateKingPositionCache();
     this.initPestoTables();
+    this.initMvvLvaTables();
   }
 
   initPestoTables() {
@@ -25,6 +27,16 @@ export default class Engine {
         // black tables
         this.mgTablesBlack[pc][sq] = MG_PIECE_VALUES[pc] + MG_PIECE_SQUARE_TABLE[pc][FLIP[sq]];
         this.egTablesBlack[pc][sq] = EG_PIECE_VALUES[pc] + EG_PIECE_SQUARE_TABLE[pc][FLIP[sq]];
+      }
+    }
+  }
+
+  initMvvLvaTables() {
+    for (let pcA = PIECE.PAWN; pcA <= PIECE.KING; pcA++) {
+      for (let pcV = PIECE.PAWN; pcV <= PIECE.KING; pcV++) {
+        const attackerValue = MG_PIECE_VALUES[pcA];
+        const victimValue = MG_PIECE_VALUES[pcV];
+        this.mvvLvaTables[pcA][pcV] = (victimValue * 10) - attackerValue;
       }
     }
   }
@@ -195,6 +207,12 @@ export default class Engine {
     const from = ChessBoard.algebraicToIndex(move.substring(0,2));
     const to = ChessBoard.algebraicToIndex(move.substring(2,4));
     return [from, to];
+  }
+
+  mvvLvaScore(move: number) {
+    const attacker = this.chessboard.board[(move & ENCODED_MOVE.FROM_INDEX)] & PIECE_MASK.TYPE;
+    const victim = ((move & ENCODED_MOVE.PIECE_CAPTURE) >> 16) & PIECE_MASK.TYPE;
+    return this.mvvLvaTables[attacker][victim];
   }
 
   generatePseudoMoves(turnColour: number): Uint32Array {
@@ -403,7 +421,7 @@ export default class Engine {
 
     // efficiently combine all moves into single array, with capture moves being ordered first
     const combinedMoves = new Uint32Array(regularMovesIdx + captureMovesIdx);
-    combinedMoves.set(captureMoves.subarray(0, captureMovesIdx), 0);
+    combinedMoves.set(captureMoves.subarray(0, captureMovesIdx).sort((moveA, moveB) => this.mvvLvaScore(moveB) - this.mvvLvaScore(moveA)), 0);  // MVV-LVA sort before combining
     combinedMoves.set(regularMoves.subarray(0, regularMovesIdx), captureMovesIdx);
     return combinedMoves;
   }
