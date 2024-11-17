@@ -19,7 +19,7 @@
 body {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  min-height: 100dvh;
   background: var(--colour-2);
   letter-spacing: 0.1em;
 }
@@ -40,6 +40,17 @@ h1 {
   color: var(--colour-4);
   text-decoration: underline;
   text-decoration-color: var(--colour-1);
+}
+
+footer {
+  display: flex;
+  justify-content: end;
+  gap: 0.5em;
+}
+
+footer a {
+  padding: 0.5em;
+  color: var(--colour-4);
 }
 
 #settings {
@@ -277,10 +288,18 @@ input[type="range"].form-input::-webkit-slider-thumb {
 }
 
 
-/* Highlight chess squares on current turn */
+/* Allow highlight of chess squares only on current turn */
 #chessboard.current-turn .chess-square:hover {
   background: #333;
   cursor: pointer;
+}
+
+.in-check {
+  background: var(--colour-4) !important;
+}
+
+.last-moved {
+  border: 2px solid var(--colour-4) !important;
 }
 
 /* Classic theme */

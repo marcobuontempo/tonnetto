@@ -14,29 +14,20 @@ IMPLEMENTED
 
 
 TODO (ENGINE):
-- Complete UCI operability (mostly completed)
-- Improve faster and search speed (Null move pruning, ...)
-- run as standalone engine in command-line or browser environment
+- improve faster and search speed (Null move pruning, ...)
 - refactor code to improve performance (generate moves, is move legal, evaluate position, search, hardcode constants)
 - prettify/eslint
 - specify types for all method returns
 - add comments and annotations where necessary, JSDoc
 - evaluate ELO (depth | time | ~elo)
+- Complete UCI operability
+- Create build process to output as executable
 
 
 TODO (GUI):
-- add github link and license in footer
-- highlight king in check
-- highlight last move
 - mobile responsive
 - change difficulty (1 is more than novice. show slider in terms of approx. elo)
 - import using npm script tag
-
-
-ADDED:
-- remove highlight on squares when not turn
-- gui thinking animation
-- add favicon
 
 
 PIECE SETS:

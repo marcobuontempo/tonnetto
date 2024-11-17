@@ -1,3 +1,4 @@
+import { TURN } from './dist/engine.bundle.js';
 import { ChessEngineAPI } from './dist/engine.bundle.js'
 
 const chessWorker = new Worker('chessWorker.js', { type: 'module' });
@@ -17,6 +18,8 @@ const state = {
   difficulty: 3,                                                      // the difficulty of the AI (i.e scales the depth): 1-5 (but not necessarily depth 1-5)
   pieceSet: 'open-chess-font',                                        // the piece set to use
   boardTheme: 'dark',                                                 // the board theme to use
+  lastMovedFrom: null,                                                // the original square of the last moved piece
+  lastMovedTo: null,                                                  // the destination square of the last moved piece
 }
 
 settingsElement.addEventListener('submit', (e) => {
@@ -32,7 +35,6 @@ settingsElement.addEventListener('submit', (e) => {
   if (boardTheme) state.boardTheme = boardTheme;
 
   // Start game
-
   settingsElement.style.display = 'none';
   gameElement.style.display = 'block';
   render();
@@ -69,10 +71,12 @@ const renderBoard = () => {
   const board = document.getElementById('chessboard');
   board.innerHTML = '';
   const position = transformFenToPositionArray();
+  const currentTurn = getTurn();
+  let kingSquare;
   
   if (state.playerColour === 'b') board.classList.add('flip');  // flip board to perspective of player colour
 
-  if (state.playerColour === getTurn()) {
+  if (state.playerColour === currentTurn) {
     // only highlight square if player's current turn
     board.classList.add('current-turn');
   } else {
@@ -111,6 +115,13 @@ const renderBoard = () => {
         square.appendChild(piece);
       }
 
+      if ((currentTurn === 'w' && pieceChar === 'K') || (currentTurn === 'b' && pieceChar === 'k')) {
+        kingSquare = square;
+      }
+
+      // Highlight last moves
+      if (coordinate === state.lastMovedFrom || coordinate === state.lastMovedTo) square.classList.add('last-moved');
+
       board.appendChild(square);
       // add click event listener for selecting a piece
       square.addEventListener('click', () => {
@@ -118,6 +129,10 @@ const renderBoard = () => {
       });
     }
   }
+
+  // Highlight if king is in check
+  const engine = new ChessEngineAPI({ fen: state.fen });
+  if (engine.isKingInCheck()) kingSquare.classList.add('in-check');
 };
 
 const renderOverlay = () => {
@@ -239,6 +254,10 @@ const makeMove = (moveNotation) => {
   
   // perform the move
   engine.applyMove(moveNotation); // call the engine to make the move
+
+  // update the last moved square
+  state.lastMovedFrom = moveNotation.substring(0,2);
+  state.lastMovedTo = moveNotation.substring(2,4);
  
   // clear previous selection
   if (state.selectedSquare) {
