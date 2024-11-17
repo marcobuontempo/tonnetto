@@ -177,11 +177,12 @@ const handleSquareClick = async (square) => {
   } else if (state.selectedSquare) {
     let move = `${existingCoordinate}${clickedCoordinate}`;
     const movedPieceType = state.selectedSquare.children[0].getAttribute('data-piece-type');
+    const fileFrom = existingCoordinate[0];
+    const fileTo = clickedCoordinate[0];
     const rankTo = parseInt(clickedCoordinate[1]);
-    if ((movedPieceType === 'P' && rankTo === 8) || (movedPieceType === 'p' && rankTo === 1)) {
+    if (((movedPieceType === 'P' && rankTo === 8) || (movedPieceType === 'p' && rankTo === 1)) && (fileFrom === fileTo)) {
       const promotionPiece = await selectPromotionPiece();
       if (!promotionPiece) {
-        toggleSquareHighlight(square);
         toggleSquareHighlight(state.selectedSquare);
         state.selectedSquare = null;
         return;

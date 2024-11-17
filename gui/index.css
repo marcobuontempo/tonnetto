@@ -14,6 +14,8 @@
   --colour-light: #eee;
   --radius: 16px;
   --radius-sm: 8px;
+
+  --square-size: 50px;
 }
 
 body {
@@ -35,7 +37,7 @@ main {
 h1 {
   width: 100%;
   text-align: center;
-  padding: 1em;
+  padding: 1em 0;
   letter-spacing: 0.5em;
   color: var(--colour-4);
   text-decoration: underline;
@@ -46,6 +48,7 @@ footer {
   display: flex;
   justify-content: end;
   gap: 0.5em;
+  margin-top: 1.5em;
 }
 
 footer a {
@@ -185,8 +188,8 @@ input[type="range"].form-input::-webkit-slider-thumb {
 #chessboard {
   border: 2px solid var(--colour-dark);
   display: grid;
-  grid-template-columns: repeat(8, 50px);
-  grid-template-rows: repeat(8, 50px);
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
 }
 
 #thinking {
@@ -251,8 +254,8 @@ input[type="range"].form-input::-webkit-slider-thumb {
 }
 
 .chess-square {
-  width: 50px;
-  height: 50px;
+  width: var(--square-size);
+  height: var(--square-size);
   position: relative;
 }
 
@@ -351,4 +354,31 @@ input[type="range"].form-input::-webkit-slider-thumb {
 
 .selected-square.neo {
   background-color: #bbb;
+}
+
+
+@media (max-width: 500px) {
+  * {
+    --square-size: calc(calc(100dvw / 8) - 1px);
+  }
+
+  #settings {
+    box-shadow: none;
+  }
+
+  .chessboard-container {
+    padding: 2px;
+    margin: 0;
+    border-radius: 2px;
+    box-shadow: none;
+    border: none;
+  }
+
+  .promotion-container {
+    box-shadow: none;
+  }
+
+  #end-overlay {
+    border-radius: 2px;
+  }
 }
