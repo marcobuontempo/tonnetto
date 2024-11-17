@@ -1,4 +1,4 @@
-import { ChessEngineAPI } from "./dist/engine.bundle.js";
+import { ChessEngineAPI } from "./dist/tonnetto.bundle.js";
 
 self.onmessage = function(event) {
   const message = JSON.parse(event.data);

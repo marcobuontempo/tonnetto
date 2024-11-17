@@ -48,7 +48,7 @@ footer {
   display: flex;
   justify-content: end;
   gap: 0.5em;
-  margin-top: 1.5em;
+  padding-top: 1.5em;
 }
 
 footer a {

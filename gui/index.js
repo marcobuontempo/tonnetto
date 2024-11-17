@@ -1,5 +1,4 @@
-import { TURN } from './dist/engine.bundle.js';
-import { ChessEngineAPI } from './dist/engine.bundle.js'
+import { ChessEngineAPI } from './dist/tonnetto.bundle.js'
 
 const chessWorker = new Worker('chessWorker.js', { type: 'module' });
 const gameElement = document.getElementById('game');

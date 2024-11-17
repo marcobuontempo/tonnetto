@@ -138,7 +138,7 @@ export default class ChessEngineAPI {
   }
 
   /* adds this instance to the global window namespace, so it is callable within browser */
-  mountToWindow(name = 'chessEngine') {
+  mountToWindow(name = 'tonnetto') {
     if (typeof window !== 'undefined') {
       window[name] = this;
     }

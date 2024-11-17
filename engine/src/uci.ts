@@ -1,5 +1,4 @@
 import ChessEngineAPI from "./api";
-import process from 'process'
 import { DEFAULT_FEN } from "./constants";
 
 export default class UCIInterface {

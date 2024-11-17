@@ -1,15 +1,15 @@
 import typescript from '@rollup/plugin-typescript';
-import nodePolyfills from 'rollup-plugin-polyfill-node';
 
 export default {
   input: 'src/index.ts',
   output: {
-    file: 'dist/engine.bundle.js',
+    file: 'dist/tonnetto.bundle.js',
     format: 'esm',
     sourcemap: true,
+    inlineDynamicImports: true,
   },
   plugins: [
-    nodePolyfills({ sourceMap: true }),
-    typescript(),
+    typescript()
   ],
+  external: ['process'], // Exclude 'process' from being bundled in the browser
 };
