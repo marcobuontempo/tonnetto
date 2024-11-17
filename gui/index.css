@@ -3,6 +3,7 @@
   margin: 0;
   padding: 0;
   font-family: monospace;
+  cursor: default;
 
   --colour-1: #119DA4;
   --colour-2: #0C7489;
@@ -180,7 +181,28 @@ input[type="range"].form-input::-webkit-slider-thumb {
 #thinking {
   text-align: center;
   color: var(--colour-5);
-  padding: 0.25em;
+  padding: 0.5em;
+}
+
+.thinking-animation {
+  width: 100%;
+  height: 1.5em;
+  margin: 0.5em 0;
+  filter: opacity(0.25);
+  background-image: url("./images/tonnetto-icon.svg");
+}
+
+.thinking-animation.animate {
+  animation: animate-think 30s linear infinite;
+}
+
+@keyframes animate-think {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 0%;
+  }
 }
 
 #end-overlay {
@@ -202,6 +224,7 @@ input[type="range"].form-input::-webkit-slider-thumb {
   background: rgba(0,0,0,0.3);
   text-align: center;
   z-index: 100;
+  border-radius: var(--radius);
 }
 
 #endgame-text {
@@ -219,7 +242,6 @@ input[type="range"].form-input::-webkit-slider-thumb {
 .chess-square {
   width: 50px;
   height: 50px;
-  cursor: pointer;
   position: relative;
 }
 
@@ -227,6 +249,7 @@ input[type="range"].form-input::-webkit-slider-thumb {
   width: 100%;
   height: 100%;
   position: absolute;
+  cursor: pointer;
 }
 
 #promotion-select-form {
@@ -253,13 +276,16 @@ input[type="range"].form-input::-webkit-slider-thumb {
   border-radius: var(--radius);
 }
 
+
+/* Highlight chess squares on current turn */
+#chessboard.current-turn .chess-square:hover {
+  background: #333;
+  cursor: pointer;
+}
+
 /* Classic theme */
 .chess-square.classic {
   border: 1px solid #333;
-}
-
-.chess-square.classic:hover {
-  background-color: #333;
 }
 
 .white-square.classic {
@@ -279,10 +305,6 @@ input[type="range"].form-input::-webkit-slider-thumb {
   border: 1px solid #aaa;
 }
 
-.chess-square.light:hover {
-  background-color: #333;
-}
-
 .white-square.light {
   background-color: #f5f5f0;
 }
@@ -298,10 +320,6 @@ input[type="range"].form-input::-webkit-slider-thumb {
 /* Neo theme */
 .chess-square.neo {
   border: 1px solid #000;
-}
-
-.chess-square.neo:hover {
-  background-color: #333;
 }
 
 .white-square.neo {

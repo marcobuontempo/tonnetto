@@ -6,6 +6,8 @@ const settingsElement = document.getElementById('settings');
 const endOverlayElement = document.getElementById('end-overlay');
 const endTextElement = document.getElementById('endgame-text');
 const thinkingElement = document.getElementById('thinking');
+const thinkingText = document.getElementById('thinking-text');
+const thinkingAnimationElements = document.querySelectorAll('.thinking-animation');
 
 const state = {
   gameState: 'playing',                                               // the current game state (playing | 50-move | stalemate | checkmate) 
@@ -35,8 +37,7 @@ settingsElement.addEventListener('submit', (e) => {
   gameElement.style.display = 'block';
   render();
 
-  const currentTurn = fen.split(' ')[1];
-  if (state.playerColour !== currentTurn) makeComputerMove();
+  if (state.playerColour !== getTurn()) makeComputerMove();
 })
 
 const difficultyScale = {
@@ -69,7 +70,14 @@ const renderBoard = () => {
   board.innerHTML = '';
   const position = transformFenToPositionArray();
   
-  if (state.playerColour === 'b') board.classList.add('flip');
+  if (state.playerColour === 'b') board.classList.add('flip');  // flip board to perspective of player colour
+
+  if (state.playerColour === getTurn()) {
+    // only highlight square if player's current turn
+    board.classList.add('current-turn');
+  } else {
+    board.classList.remove('current-turn');
+  }
   
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']; // chess files (columns)
   for (let row = 8; row > 0; row--) { // rows 8 to 1
@@ -91,9 +99,7 @@ const renderBoard = () => {
 
       let pieceChar = position[row-1][col];
       
-      if (pieceChar === '0') {
-        // empty square, no action needed
-      } else {
+      if (pieceChar !== '0') {
         // if it's a piece, add the image of the piece
         const piece = document.createElement('img');
         const pieceColour = pieceChar.toLowerCase() === pieceChar ? 'b' : 'w';
@@ -211,8 +217,15 @@ const toggleSquareHighlight = (square) => {
   square.classList.toggle('selected-square');
 }
 
-const setThinkingState = (action) => {
-  thinkingElement.innerHTML = `Tonnetto Bot is ${action}`;
+const setBotIsThinking = (isThinking) => {
+  thinkingText.innerHTML = `Tonnetto Bot is ${isThinking ? 'thinking...' : 'ready for your turn!'}`;
+  thinkingAnimationElements.forEach((el) => {
+    if (isThinking) {
+      el.classList.add('animate');
+    } else {
+      el.classList.remove('animate');
+    }
+  })
 }
 
 const isValidMove = (moveNotation) => {
@@ -242,7 +255,7 @@ const makeMove = (moveNotation) => {
 
 const makeComputerMove = () => {
   // send the board state to the worker for processing
-  setThinkingState('thinking...');
+  setBotIsThinking(true);
   const message = {
     fen: state.fen,
     depth: difficultyScale[state.difficulty],
@@ -256,7 +269,7 @@ const makeComputerMove = () => {
       // update the board with the best move
       makeMove(bestMove);
     }
-    setThinkingState('ready for your turn!');
+    setBotIsThinking(false);
   };
 }
 
