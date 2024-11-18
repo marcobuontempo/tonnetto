@@ -1,4 +1,4 @@
-import { ChessEngineAPI } from './dist/tonnetto.bundle.js'
+import TonnettoEngine from 'https://cdn.jsdelivr.net/npm/tonnetto';
 
 const chessWorker = new Worker('chessWorker.js', { type: 'module' });
 const gameElement = document.getElementById('game');
@@ -130,7 +130,7 @@ const renderBoard = () => {
   }
 
   // Highlight if king is in check
-  const engine = new ChessEngineAPI({ fen: state.fen });
+  const engine = new TonnettoEngine({ fen: state.fen });
   if (engine.isKingInCheck()) kingSquare.classList.add('in-check');
 };
 
@@ -244,13 +244,13 @@ const setBotIsThinking = (isThinking) => {
 }
 
 const isValidMove = (moveNotation) => {
-  const engine = new ChessEngineAPI({ fen: state.fen });
+  const engine = new TonnettoEngine({ fen: state.fen });
   engine.applyMove(moveNotation);
   return !(engine.getFen().split(' ')[0] === state.fen.split(' ')[0]);
 }
 
 const makeMove = (moveNotation) => {
-  const engine = new ChessEngineAPI({ fen: state.fen });
+  const engine = new TonnettoEngine({ fen: state.fen });
   
   // perform the move
   engine.applyMove(moveNotation); // call the engine to make the move

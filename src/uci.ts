@@ -41,9 +41,6 @@ export default class UCIInterface {
       case 'go':
         this.go(args);
         break;
-      case 'stop':
-        this.stop();
-        break;
       case 'quit':
         this.quit();
         break;
@@ -92,15 +89,12 @@ export default class UCIInterface {
   }
 
   go(args: Array<string>) {
-    let depth;
     if (args[1] === 'depth') {
-      depth = parseInt(args[2]);
+      const depth = parseInt(args[2]);
+      const bestMove = this.engine.getBestMove(depth);
+      console.log(bestMove);
+      return bestMove;
     }
-    return this.engine.getBestMove(depth);
-  }
-
-  stop() {
-    return false;
   }
 
   quit() {

@@ -23,3 +23,5 @@ export {
   ChessEngineAPI,
   TURN,
 };
+
+export default ChessEngineAPI;

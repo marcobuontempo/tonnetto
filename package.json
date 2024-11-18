@@ -1,0 +1,49 @@
+{
+  "name": "tonnetto",
+  "version": "1.0.1",
+  "description": "Tonnetto is a TypeScript-based chess engine. It can be natively run in the browser, benefitting from a small bundle size. It can also be run directly in the terminal, with UCI protocol support.",
+  "main": "dist/index.js",
+  "type": "module",
+  "files": [
+    "dist/index.js",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "npx rollup -c",
+    "start": "node dist/index.js",
+    "dev": "nodemon",
+    "test": "jest"
+  },
+  "keywords": [
+    "chess",
+    "engine",
+    "browser",
+    "uci"
+  ],
+  "author": "Marco Buontempo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcobuontempo/tonnetto.git"
+  },
+  "bugs": {
+    "url": "https://github.com/marcobuontempo/tonnetto/issues"
+  },
+  "homepage": "https://github.com/marcobuontempo/tonnetto/blob/main/README.md",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.1",
+    "@types/jest": "^29.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.11.0",
+    "@typescript-eslint/parser": "^8.11.0",
+    "eslint": "^9.13.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.7",
+    "prettier": "^3.3.3",
+    "rollup": "^4.24.4",
+    "ts-jest": "^29.2.5",
+    "tslib": "^2.8.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
