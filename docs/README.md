@@ -1,3 +1,7 @@
+**tonnetto** • [**Docs**](globals.md)
+
+***
+
 # Tonnetto Chess Engine
 
 Tonnetto is a lightweight and small JavaScript-based chess engine, designed to be a more compact alternative to heavyweight engines like Stockfish. Inspired by the name Stockfish, which translates to "cod" in Norwegian, Tonnetto is named after "little tuna" — a playful and fitting tribute to the original engine.
@@ -27,12 +31,16 @@ In saying this, Tonnetto is just a hobbyist project and so may not fulfill your 
   - Horsey: Designed by cham and michael1241 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 ## FUTURE TODO:
-  - [] Move Search: Add ability to track and avoid 3-move repetition.
-  - [] Performance Improvements: Add advanced search features like null move pruning, and other pruning techniques.
+  - [] Performance Improvements: Work on optimizing search speed, including adding features like null move pruning and other advanced pruning techniques.
+  - [] Code Refactoring: Refactor code to improve performance in key areas, such as generate moves, is move legal, evaluate position, search, and hardcode constants.
   - [] Prettify/ESLint: Clean up the code style and enforce consistent formatting with ESLint.
+  - [] TypeScript Typing: Fully specify return types for all methods to ensure strong type checking and improve maintainability.
+  - [] Add JSDoc: Document code with annotations to make it easier for developers to understand and contribute.
   - [] Evaluate Engine Strength: Measure the engine's strength with respect to depth, time, and approximate Elo rating. Present in a table format.
-  - [] Build Process: Create a build process to output Tonnetto as an executable for easier distribution and usage in UCI mode.
+  - [] Build Process: Create a build process to output Tonnetto as an executable for easier distribution and usage.
+  - [] Publish to NPM: Publish Tonnetto as an npm package to make it easier to install and use in web projects.
   - [] GUI Demo Enhancements: Update the demo to reflect the difficulty level as an approximate Elo rating in the slider (instead of showing depth).
+  - [] Switch to npm Import in GUI Demo: Refactor the demo to import the engine via npm rather than directly using the bundled JS file.
 
 ## Usage
 
@@ -63,14 +71,6 @@ You can play the bot directly in the browser, using the custom-built GUI at [che
 
 1. Refer to [ChessEngineAPI](/docs/classes/ChessEngineAPI.md) for usage. *Note: TonnettoEngine is an alias for ChessEngineAPI, hence it contains the exact same methods*
 
-1. For example, to get the best move in the position and apply it:
-    ```js
-    engine.getFen();  // returns the current position
-    const move = engine.getBestMove(5);  // finds the best move in the position
-    engine.applyMove(move);  // applies the move to the engine
-    engine.getFen();  // returns the new position
-    ```
-
 ### NodeJs Terminal
 1. Start the file where you have imported the program (for example, if you imported into a file called `chess-engine.js`):
     ```bash
@@ -95,8 +95,7 @@ You can play the bot directly in the browser, using the custom-built GUI at [che
   - `quit`: exits the program
 
 ## License
-Tonnetto is open-source and licensed under the [MIT License](LICENSE).
+Tonnetto is open-source and licensed under the [MIT License](_media/LICENSE).
 
 ## Contributing
 Contributions to Tonnetto are welcome! Please fork the repository, make your changes, and submit a pull request. Preferred contributions are unit tests or bug-fixes, but feature additions or optimisations are also welcome
-

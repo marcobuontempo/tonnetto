@@ -12,12 +12,26 @@ interface ConstructorOptions {
   debug?: boolean;
 }
 
+/**
+ * @class ChessEngineAPI
+ * 
+ * ChessEngineAPI is a wrapper around the chess engine logic.
+ * It provides methods for managing the game state, applying moves, 
+ * checking the game status, and interfacing with the chess engine.
+ */
 export default class ChessEngineAPI {
   private initialFEN: string;
   private engine: Engine;
   private debug: boolean;
   private start: number;
 
+  /**
+   * Creates an instance of ChessEngineAPI.
+   * 
+   * @param {Object} [options] - The constructor options.
+   * @param {string} [options.fen] - The initial FEN string representing the game state.
+   * @param {boolean} [options.debug=false] - Whether to enable debug logging.
+   */
   constructor(options: ConstructorOptions = {}) {
     const { fen, debug } = options;
     this.engine = new Engine(fen || DEFAULT_FEN);
@@ -26,29 +40,53 @@ export default class ChessEngineAPI {
     this.start = 0;
   }
 
-  /* sets the board state according to new FEN input. removes existing engine state */
+  /**
+   * Sets the board state according to a new FEN input and resets the engine state.
+   * 
+   * @param {string} fen - The new FEN string to set the board state.
+   */
   setFen(fen: string) {
     this.engine = new Engine(fen);
     this.initialFEN = fen;
   }
 
-  /* gets the current board FEN */
-  getFen() {
+  /**
+   * Gets the current board FEN string.
+   * 
+   * @returns {string} The current board state in FEN format.
+   */
+  getFen(): string {
     return this.engine.chessboard.getFen();
   }
 
-  /* resets board to the last provided FEN */
+  /**
+   * Resets the board to the last provided FEN string. (i.e. the initial FEN when instantiated, or the last call to setFen())
+   */
   resetBoard() {
     this.engine = new Engine(this.initialFEN);
   }
 
-  /* checks if current king is in check */
-  isKingInCheck() {
+  /**
+   * Checks if the current turn's king is in check.
+   * 
+   * @returns {boolean} True if the king is in check, false otherwise.
+   */
+  isKingInCheck(): boolean {
     const currentTurn = ((this.engine.chessboard.state[this.engine.chessboard.ply]) & BOARD_STATES.CURRENT_TURN_WHITE) ? TURN.WHITE : TURN.BLACK;
     return this.engine.kingIsInCheck(currentTurn);
   }
 
-  /* get the game state (breakdown of information from the FEN) */
+  /**
+   * Retrieves the current game state from the FEN string.
+   * 
+   * @returns {Object} The current game state containing board, turn, castle, ep, halfmove, and fullmove information.
+   * @returns {string} returns.board - The board state in FEN format.
+   * @returns {string} returns.turn - The turn (either 'w' for white or 'b' for black).
+   * @returns {string} returns.castle - The castling rights as a string.
+   * @returns {string} returns.ep - The en passant target square, if any.
+   * @returns {number} returns.halfmove - The halfmove clock (number of half-moves since the last pawn move or capture).
+   * @returns {number} returns.fullmove - The fullmove number.
+   */
   getGameState() {
     const [board, turn, castle, ep, halfmove, fullmove] = this.engine.chessboard.getFen();
     return {
@@ -61,8 +99,12 @@ export default class ChessEngineAPI {
     }
   }
 
-  /* (playing | 50 move | stalemate | checkmate) */
-  isGameOver() {
+  /**
+   * Checks if the game is over (50-move rule, checkmate, stalemate, or still playing).
+   * 
+   * @returns {string} One of '50-move', 'checkmate', 'stalemate', or 'playing'.
+   */
+  isGameOver(): string {
     const moves = this.getBestMove(1);
     const kingInCheck = this.isKingInCheck();
     const { halfmove } = this.getGameState();
@@ -82,8 +124,13 @@ export default class ChessEngineAPI {
     return 'playing';
   }
 
-  /* apply a move to the board with algebraic notation. i.e. e2e4 */
-  applyMove(move: string) {
+  /**
+   * Applies a move to the board in algebraic notation (e.g. "e2e4").
+   * 
+   * @param {string} move - The move in algebraic notation.
+   * @returns {boolean} True if the move was valid and applied, false otherwise.
+   */
+  applyMove(move: string): boolean {
     if (!/^[a-h][1-8][a-h][1-8][bnrq]?$/.test(move.toLowerCase())) return false;  // don't allow invalid algebraic input
 
     const [from, to] = Engine.algebraicMoveToIndexes(move);
@@ -102,17 +149,28 @@ export default class ChessEngineAPI {
     if (!legalMove) return false;  // if no move found, then it isn't legal or existing
 
     this.engine.makeMove(legalMove);  // finally, make the move on the board
+    return true;
   }
 
-  /* undo the last move made. can keep being called to first move */
-  undoMove() {
+  /**
+   * Undoes the last move made.
+   * 
+   * @returns {boolean} True if a move was undone, false if no moves are left to undo.
+   */
+  undoMove(): boolean {
     const lastMove = this.engine.moveHistory[this.engine.chessboard.ply];
     if (lastMove === 0) return false;  // no more moves to undo
     this.engine.unmakeMove(lastMove);
+    return true;
   }
 
-  /* searches and returns the best move in the position, up to a specified depth */
-  getBestMove(depth = 5) {
+  /**
+   * Searches and returns the best move for the current position up to a specified depth.
+   * 
+   * @param {number} [depth=5] - The depth, in ply, to search for the best move.
+   * @returns {string|null} The best move in algebraic notation or null if no move is found.
+   */
+  getBestMove(depth: number = 5): string | null {
     if (this.debug) {
       this.start = performance.now();
     }
@@ -131,20 +189,32 @@ export default class ChessEngineAPI {
     return null;
   }
 
-  /* perft for a specific position and depth */
+  /**
+   * Performs a perft (performance test) for a given position and depth.
+   * 
+   * @param {Object} options - The perft options.
+   * @param {string} [options.position=DEFAULT_FEN] - The FEN string representing the position to test.
+   * @param {number} [options.depth=5] - The depth to search for perft.
+   */
   perft({ position = DEFAULT_FEN, depth = 5 }: { position?: string, depth?: number } = {}) {
     this.setFen(position);
     this.engine.perft(depth, true);
   }
 
-  /* adds this instance to the global window namespace, so it is callable within browser */
-  mountToWindow(name = 'tonnetto') {
+  /**
+   * Mounts this instance to the global window namespace, making it accessible in the browser.
+   * 
+   * @param {string} [name='tonnetto'] - The name under which the instance will be available in the global scope.
+   */
+  mountToWindow(name: string = 'tonnetto') {
     if (typeof window !== 'undefined') {
       window[name] = this;
     }
   }
 
-  /* prints board using ascii characters to cli/console 8 */
+  /**
+   * Prints the current board to the console using ASCII characters.
+   */
   print() {
     this.engine.chessboard.printBoard();
   }
