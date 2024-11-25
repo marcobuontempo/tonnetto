@@ -88,14 +88,14 @@ export default class ChessEngineAPI {
    * @returns {number} returns.fullmove - The fullmove number.
    */
   getGameState() {
-    const [board, turn, castle, ep, halfmove, fullmove] = this.engine.chessboard.getFen();
+    const [board, turn, castle, ep, halfmove, fullmove] = this.engine.chessboard.getFen().split(' ');
     return {
       board,
       turn,
       castle,
       ep,
       halfmove: parseInt(halfmove),
-      fullmove: parseInt(halfmove),
+      fullmove: parseInt(fullmove),
     }
   }
 
