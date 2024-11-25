@@ -70,11 +70,12 @@ export default class UCIInterface {
     let moves;
 
     if (args[1] === 'fen') {
-      fen = args[2];
-      moves = args.slice(3);
+      fen = args.slice(2,8).join(' ');
+      moves = args.slice(8);
     } else if (args[1] === 'startpos') {
       fen = DEFAULT_FEN;
       moves = args.slice(2);
+      console.log(fen, moves)
     } else {
       return false;
     }
@@ -92,7 +93,6 @@ export default class UCIInterface {
     if (args[1] === 'depth') {
       const depth = parseInt(args[2]);
       const bestMove = this.engine.getBestMove(depth);
-      console.log(bestMove);
       return bestMove;
     }
   }

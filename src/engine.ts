@@ -768,7 +768,6 @@ export default class Engine {
     }
     
     const moves = this.generateLegalMoves(turnColour);
-
     if (moves.length === 0) {
       if (this.kingIsInCheck(turnColour)) {
         // checkmate. return a mate score adjusted for depth
@@ -778,6 +777,11 @@ export default class Engine {
         // stalemate
         return { score: 0, bestMove: null };
       }
+    }
+
+    const halfmoveCount = this.chessboard.state[this.chessboard.ply] & BOARD_STATES.HALFMOVE_CLOCK;
+    if (halfmoveCount === 100) {
+      return { score: 0, bestMove: null };
     }
 
     const opponentColour = turnColour === TURN.WHITE ? TURN.BLACK : TURN.WHITE;
