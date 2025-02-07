@@ -4,7 +4,12 @@ Tonnetto is a lightweight and small JavaScript-based chess engine, designed to b
 
 Unlike many current JavaScript chess engines that are written in WebAssembly (WASM) and optimised for higher-performance server-side usage, Tonnetto focuses on being more lightweight and runs natively in the browser, making it an excellent choice for web applications that require minimal footprint. It also aims to be more performant than "tiny" JS chess engines at the cost of a slightly larger bundle size.
 
-In saying this, Tonnetto is just a hobbyist project and so may not fulfill your requirements better than other alternatives.
+>[!NOTE]
+>The engine's current ELO is approximately 1600 *minimum*, using depth=3 (instant move generation).
+>
+>Higher depths provide a much stronger engine, but move generation times at depth>5 are currently too slow due to combinatorial explosion.
+>
+>With further improvements such as Null Move Pruning / Zobrist Hashing / better move ordering, the search time should significantly reduce, allowing for a dramatic bump in the playing strength!
 
 ## Features
 - **Small Bundle Size:** Unlike alternatives such as [stockfish.js](https://github.com/nmrugg/stockfish.js/) which can be around 6MB-66MB in bundle size (depending if lite-mode or full-performance), Tonnetto's JavaScript implementation is significantly smaller, at only ~20kB.
