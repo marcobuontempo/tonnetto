@@ -1,6 +1,6 @@
 {
   "name": "tonnetto",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Tonnetto is a TypeScript-based chess engine. It can be natively run in the browser, benefitting from a small bundle size. It can also be run directly in the terminal, with UCI protocol support.",
   "main": "dist/index.js",
   "type": "module",
